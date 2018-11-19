@@ -1,0 +1,12 @@
+#-*- mode:snakemake -*-
+
+def function():
+    pass
+
+rule example:
+    output:
+        'test.txt'
+    conda:
+        'envs/base.yaml'
+    shell:
+        'touch {output}'

@@ -1,0 +1,33 @@
+#-*- mode: snakemake -*-
+"""
+This is a part of the pipeline utilities at Genomics Core Facility (GCF),  Trondheim
+
+single-cell
+===================================
+single-cell Analysis Pipeline.
+
+Documentation: https://github.com/single-cell
+Authors:
+Arnar Flatberg / flatberg <arnar.flatberg@gmail.com>
+"""
+
+from os.path import join, abspath
+import sys
+import yaml
+
+from snakemake.workflow import srcdir
+from snakemake.logging import logger
+from snakemake.utils import update_config
+
+TMPDIR = os.environ.get('TMPDIR', '/tmp')
+INTERIM_DIR = config.get('interim_dir', os.environ.get('GCF-INTERIM')) or abspath('data/tmp')
+
+
+extra_conf_fn = srcdir('single-cell.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config(config, c)
+
+include:
+    'rules/example.rules'
