@@ -1,0 +1,43 @@
+#-*- mode:snakemake -*-
+
+rule cellranger_count:
+    input:
+        fastq = 'path_to/fastq/{sample}.fastq.gz'
+    params:
+        input = 'path_to/fastq/',
+        id = '{sample}',
+        sample = '{sample}',
+        transcriptome = rules.cellranger_single_species_mkref.params.genome_output,
+        ncells = 3000
+    threads:
+        8
+    output:
+        summary = 'output_dir/{sample}/outs/web_summary.html',
+        filtered_counts_h5 = 'output_dir/{sample}/outs/filtered_gene_bc_matrices_h5.h5',
+        filtered_counts_mex = 'output_dir/{sample}/outs/filtered_gene_bc_matrices',
+        counts_h5 = 'output_dir/{sample}/outs/raw_gene_bc_matrices_h5.h5',
+        counts_mex = 'output_dir/{sample}/outs/raw_gene_bc_matrices',
+    shell:
+        'cellranger count '
+        '--fastqs {params.input} '
+        '--id {params.id} '
+        '--sample {params.sample} '
+        '--transcriptome {params.transcriptome} '
+        '--expect-cells {params.ncells} '
+        '--localcores {threads}'
+
+rule cellranger_aggr:
+    
+    
+rule cellranger_kit:
+    input:
+        rules.cellranger_count.output.counts
+    params:
+        script = srcdir('scripts/cellranger_kit_load.R')
+    output:
+        'cellranger_kit/data.rds'
+    shell:
+        'Rscript {params.script} {input} {output}'
+
+rule scanpy_load:
+    

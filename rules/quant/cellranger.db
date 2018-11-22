@@ -1,0 +1,47 @@
+#-*- mode:snakemake -*-
+from os.path import join
+
+EXTDIR = config.get('ext_dir', 'data/ext')
+CELLRANGER_EXT = join(EXTDIR, 'cellranger')
+_BIOTYPES = ['protein_coding', 'lincRRNA', 'antisense']
+_ATTR = ['--attribute=gene_biotype:{} '.format(b) for b in _BIOTYPES]
+ORG = config.get('organism', 'homo_sapiens')
+
+rule cellranger_mkgtf:
+    input:
+        gtf = join(EXTDIR, '{reference_db}', 'genes.gtf')
+    output:
+        gtf = join(CELLRANGER_EXT, '{reference_db}.filtered.gtf')
+    params:
+        attr = ' '.join(_ATTR)
+    shell:
+        'cellranger mkgtf '
+        '{input.gtf} '
+        '{output.gtf} '
+        '{params.attr}'
+
+rule cellranger_premirna_gtf:
+    input:
+        gtf = join(CELLRANGER_EXT, '{reference_db}.filtered.gtf')
+    output:
+        gtf = join(CELLRANGER_EXT, '{reference_db}.permirna.gtf')
+    shell:
+        """
+        awk 'BEGIN{{FS="\t"; OFS="\t"}} $3 == "transcript"{{ $3="exon"; print}}' {input.gtf} > {output.gtf}
+        """
+
+rule cellranger_single_species_mkref:
+    input:
+        genome = join(EXTDIR, '{reference_db}', 'genome.fa'),
+        filtered_gtf = rules.cellranger_mkgtf.output
+    params:
+        genome_name = join(CELLRANGER_EXT, '{reference_db}_' + ORG)
+    output:
+        ''
+    shell:
+        'cellranger mkref '
+        '--genome={params.genome_name} '
+        '--fasta={input.genome} '
+        '--genes={input.filtered_gtf}'
+        
+rule cellranger_multi_species_mkref:
