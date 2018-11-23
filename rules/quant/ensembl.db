@@ -3,9 +3,9 @@ from os.path import join
 import string
 
 # config
-ENSEMBL_EXT = join(config.get('ext_dir', 'data/ext'), 'ensembl')
+ENSEMBL_EXT = join(EXT_DIR, 'ensembl')
 ORG = config.get('organism', 'homo_sapiens')
-ECONF = config.get('ensembl', {})
+DB_CONF = config.get('ensembl', {})
 ASSEMBLY = DB_CONF.get('assembly', 'primary_assembly')
 ENS_RELEASE = DB_CONF.get('ensembl_release', '92')
 ENS_VER = DB_CONF.get('ensembl_version', 'GRCh38')
@@ -97,7 +97,7 @@ rule ensembl_addercc2genome:
         rules.ensembl_dna.output,
         rules.ercc_files.output.ercc_fasta
     output:
-        rules.dna.output[0].split('.fa')[0] + '.ERCC92.fa'
+        rules.ensembl_dna.output[0].split('.fa')[0] + '.ERCC92.fa'
     shell:
         'cat {input} > {output}'
 
@@ -132,9 +132,9 @@ ERCC = config.get('ercc', False)
 rule ensembl_all:
     input:
         genome = rules.ensembl_add_ercc2genome.output if ERCC else rules.ensembl_dna.output,
-        cdna = rules.add_ercc2cdna.output if ERCC else rules.ensembl_cdna.output,
-        noncoding = rules.noncoding.output,
-        gtf = rules.add_ercc2gtf.output if ERCC else rules.ensembl_gtf.output,
+        cdna = rules.ensembl_add_ercc2cdna.output if ERCC else rules.ensembl_cdna.output,
+        noncoding = rules.ensembl_noncoding.output,
+        gtf = rules.ensembl_add_ercc2gtf.output if ERCC else rules.ensembl_gtf.output,
     output:
         genome = join(ENSEMBL_EXT, 'genome.fa'),
         cdna = join(ENSEMBL_EXT, 'cdna.fa'),

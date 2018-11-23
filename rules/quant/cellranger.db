@@ -1,15 +1,19 @@
 #-*- mode:snakemake -*-
 from os.path import join
 
-EXTDIR = config.get('ext_dir', 'data/ext')
-CELLRANGER_EXT = join(EXTDIR, 'cellranger')
+CELLRANGER_EXT = join(EXT_DIR, 'cellranger')
 _BIOTYPES = ['protein_coding', 'lincRRNA', 'antisense']
 _ATTR = ['--attribute=gene_biotype:{} '.format(b) for b in _BIOTYPES]
 ORG = config.get('organism', 'homo_sapiens')
 
+include:
+    'ensembl.db'
+include:
+    'gencode.db'
+
 rule cellranger_mkgtf:
     input:
-        gtf = join(EXTDIR, '{reference_db}', 'genes.gtf')
+        gtf = join(EXT_DIR, '{reference_db}', 'genes.gtf')
     output:
         gtf = join(CELLRANGER_EXT, '{reference_db}.filtered.gtf')
     params:
@@ -32,16 +36,26 @@ rule cellranger_premirna_gtf:
 
 rule cellranger_single_species_mkref:
     input:
-        genome = join(EXTDIR, '{reference_db}', 'genome.fa'),
+        genome = join(CELLRANGER_EXT, '{reference_db}', 'genome.fa'),
         filtered_gtf = rules.cellranger_mkgtf.output
     params:
-        genome_name = join(CELLRANGER_EXT, '{reference_db}_' + ORG)
+        genome_name = '{reference_db}_' + ORG
     output:
-        ''
+        touch(join(CELLRANGER_EXT, '{reference_db}', 'index', 'haha'))
+    threads:
+        16
+    singularity:
+        'docker://ntnugcf/cellranger:3.0.0'
     shell:
         'cellranger mkref '
         '--genome={params.genome_name} '
         '--fasta={input.genome} '
-        '--genes={input.filtered_gtf}'
+        '--genes={input.filtered_gtf} '
+        '--nthreads={threads}'
         
 rule cellranger_multi_species_mkref:
+
+
+rule build_all_gtf:
+    input:
+        expand(join(EXT_DIR, '{reference_db}', 'genome.fa'), reference_db=['ensembl'])

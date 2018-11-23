@@ -1,0 +1,5 @@
+configfile:
+    'config.yaml'
+
+include:
+    '../single-cell2.sm'

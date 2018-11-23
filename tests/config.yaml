@@ -1,0 +1,13 @@
+project: GCF-2018-002
+fastq_dir: 'data/raw/fastq/p1/s1/'
+organism: homo_sapiens
+gencode:
+  gencode_release: '29'
+ensembl:
+  ensembl_release: '92'
+samples:
+  'test_sample' :
+    R1: test_sample_S1_L001_R1_001.fastq.gz
+    R2: test_sample_S1_L001_R2_001.fastq.gz
+    I1: test_sample_S1_L001_I1_001.fastq.gz
+    

@@ -1,13 +1,20 @@
 #-*- mode:snakemake -*-
 
+include:
+    'cellranger.db'
+
+def get_fastq(wildcards):
+    return config['samples'][wildcards.sample]['R1']
+
 rule cellranger_count:
     input:
-        fastq = 'path_to/fastq/{sample}.fastq.gz'
+        fastq = get_fastq,
+        transcriptome = rules.cellranger_single_species_mkref.output
     params:
-        input = 'path_to/fastq/',
+        input = FASTQ_DIR,
         id = '{sample}',
         sample = '{sample}',
-        transcriptome = rules.cellranger_single_species_mkref.params.genome_output,
+        transcriptome = rules.cellranger_single_species_mkref.params.genome_name,
         ncells = 3000
     threads:
         8
@@ -31,7 +38,7 @@ rule cellranger_aggr:
     
 rule cellranger_kit:
     input:
-        rules.cellranger_count.output.counts
+        rules.cellranger_count.output.counts_h5
     params:
         script = srcdir('scripts/cellranger_kit_load.R')
     output:
