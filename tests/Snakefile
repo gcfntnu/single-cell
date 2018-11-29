@@ -2,4 +2,4 @@ configfile:
     'config.yaml'
 
 include:
-    '../single-cell2.sm'
+    '../single-cell.sm'

@@ -1,7 +1,19 @@
 #-*- mode:snakemake -*-
 
+extra_conf_fn = srcdir('cellranger.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config2(config, c)
+
 include:
     'cellranger.db'
+
+#config
+FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
+CR_INTERIM = join(INTERIM_DIR, 'cellranger')
+CR_PROCESSED = join(PROCESSED_DIR, 'cellranger')
+REF = config['quant']['reference']
 
 def get_fastq(wildcards):
     return config['samples'][wildcards.sample]['R1']
@@ -9,21 +21,24 @@ def get_fastq(wildcards):
 rule cellranger_count:
     input:
         fastq = get_fastq,
-        transcriptome = rules.cellranger_single_species_mkref.output
+        transcriptome = join(CR_EXT, 'reference', ORG, REF, 'reference.json')
     params:
         input = FASTQ_DIR,
-        id = '{sample}',
+        id = 'sample',
+        outdir = join(CR_INTERIM, ORG, REF),
         sample = '{sample}',
-        transcriptome = rules.cellranger_single_species_mkref.params.genome_name,
+        transcriptome = rules.cellranger_single_species_mkref.params.out,
         ncells = 3000
     threads:
         8
     output:
-        summary = 'output_dir/{sample}/outs/web_summary.html',
-        filtered_counts_h5 = 'output_dir/{sample}/outs/filtered_gene_bc_matrices_h5.h5',
-        filtered_counts_mex = 'output_dir/{sample}/outs/filtered_gene_bc_matrices',
-        counts_h5 = 'output_dir/{sample}/outs/raw_gene_bc_matrices_h5.h5',
-        counts_mex = 'output_dir/{sample}/outs/raw_gene_bc_matrices',
+        summary = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'web_summary.html'),
+        filtered_counts_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'filtered_gene_bc_matrices_h5.h5'),
+        filtered_counts_mex = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'filtered_gene_bc_matrices'),
+        counts_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_gene_bc_matrices_h5.h5'),
+        counts_mex = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_gene_bc_matrices'),
+    singularity:
+        CR_DOCKER
     shell:
         'cellranger count '
         '--fastqs {params.input} '
@@ -31,20 +46,32 @@ rule cellranger_count:
         '--sample {params.sample} '
         '--transcriptome {params.transcriptome} '
         '--expect-cells {params.ncells} '
-        '--localcores {threads}'
+        '--localcores {threads} '
+        '&& mv {params.id} {params.outdir}'
 
 rule cellranger_aggr:
     
     
-rule cellranger_kit:
+rule seurat_load:
     input:
         rules.cellranger_count.output.counts_h5
     params:
-        script = srcdir('scripts/cellranger_kit_load.R')
+        script = srcdir('scripts/seurat_load.R')
     output:
         'cellranger_kit/data.rds'
+    singularity:
+        'docker://gcfntnu/seurat:2.3.4'
     shell:
-        'Rscript {params.script} {input} {output}'
+        'Rscript {params.script} --input {input} --output {output}'
 
 rule scanpy_load:
-    
+    input:
+        rules.cellranger_count.output.counts_h5
+    params:
+        script = srcdir('scripts/scanpy_load.R')
+    output:
+        'scanpy/data.anndata'
+    singularity:
+        'docker://gcfntnu/scanpy:1.3.3'
+    shell:
+        'python {params.script} --input {input} --output {output}'

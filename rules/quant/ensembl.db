@@ -3,6 +3,12 @@ from os.path import join
 import string
 
 # config
+extra_conf_fn = srcdir('ensembl.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config2(config, c)
+
 ENSEMBL_EXT = join(EXT_DIR, 'ensembl')
 ORG = config.get('organism', 'homo_sapiens')
 DB_CONF = config.get('ensembl', {})
@@ -15,6 +21,7 @@ else:
     ENS_NAME = ''
 TRANSCRIPTOME_TYPE = DB_CONF.get('transcriptome_type') #['prebuilt', 'all', 'chr', 'pri']
 PROTOCOL = DB_CONF.get('protocol', 'http')
+ERCC = DB_CONF.get('add_ercc', False)
 
 # includes
 include:
@@ -127,8 +134,7 @@ rule ensembl_add_ercc2gtf:
         rules.ensembl_gtf.output[0].split('.gtf')[0] + '.ERCC92.gtf'
     shell:
         'cat {input} > {output}'
-   
-ERCC = config.get('ercc', False)
+
 rule ensembl_all:
     input:
         genome = rules.ensembl_add_ercc2genome.output if ERCC else rules.ensembl_dna.output,

@@ -4,6 +4,12 @@ import os
 import string
 
 # config
+extra_conf_fn = srcdir('gencode.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config2(config, c)
+
 GENCODE_EXT = join(EXT_DIR, 'gencode')
 ORG = config.get('organism', 'homo_sapiens')
 GENCODE_ORG = {'homo_sapiens':  'human', 'mus_musculus': 'mouse'}[ORG]
@@ -13,9 +19,9 @@ GENCODE_RELEASE = DB_CONF.get('gencode_release', 27)
 GENCODE_VERSION = DB_CONF.get('gencode_version', 'GRCh38')
 TRANSCRIPTOME_TYPE = DB_CONF.get('transcriptome_type') #['prebuilt', 'all', 'chr', 'pri']
 PROTOCOL = DB_CONF.get('protocol', 'http')
-
+ERCC = DB_CONF.get('add_ercc', False)
 # includes
-if config.get('ercc'):
+if ERCC:
     include:
         'ercc.db'
 
@@ -129,8 +135,7 @@ rule gencode_add_ercc2gtf:
         rules.gencode_gtf.output[0].split('.gtf')[0] + '.ERCC92.gtf'
     shell:
         'cat {input} > {output}'
-   
-ERCC = config.get('ercc', False)
+
 rule gencode_all:
     input:
         genome = rules.gencode_add_ercc2genome.output if ERCC else rules.gencode_dna.output,
