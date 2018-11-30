@@ -1,14 +1,26 @@
 FROM ubuntu:18.04
 
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+# conda path
 ENV PATH /opt/conda/bin:$PATH
+# use C.UTF-8 locale 
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
+# R pre-requisites ++
 RUN apt-get update --fix-missing && \
-    apt-get install -y wget build-essential git && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    wget \
+    ca-certificates \
+    fonts-dejavu \
+    build-essential \
+    gfortran \
+    libxml2-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN wget --quiet https://repo.continuum.io/miniconda/Miniconda3-4.4.10-Linux-x86_64.sh -O ~/miniconda.sh && \
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-4.4.10-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
     /opt/conda/bin/conda clean -tipsy && \
@@ -21,16 +33,25 @@ ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/
 RUN chmod +x /usr/bin/tini
 
 RUN conda update conda
-RUN conda config --add channels defaults
-RUN conda config --add channels r
-RUN conda config --add channels bioconda
-RUN conda config --add channels conda-forge
+RUN conda config --add channels defaults && \
+    conda config --add channels r && \
+    conda config --add channels bioconda && \
+    conda config --add channels conda-forge
 
-RUN conda install --quiet --yes scanpy bioservices pip dask dca pypairs numba zappy multicore-tsne cython tasklogger graphtools tqdm python-annoy joblib scprep 
-RUN conda clean -tipsy
-
-RUN pip --no-cache-dir install phate fa2 bbknn magic-impute leidenalg
-
-#RUN git clone --recursive git://github.com/KrishnaswamyLab/PHATE.git
-#RUN cd PHATE/Python
-#RUN python setup.py install
+RUN conda install --quiet --yes \
+    'scanpy' \
+    'r-base' \
+    'r-argparse' \ 
+    'r-tidyverse' \
+    'r-ggplot2' \
+    'r-rcolorbrewer' \
+    'r-loom' \	     
+    'r-seurat' \
+    'r-seurat-scripts' \
+    'bioconductor-deseq2' \
+    'bioconductor-genomeinfodb' \
+    'bioconductor-s4vectors ' \
+    'bioconductor-summarizedexperiment' \ 
+    'bioconductor-singlecellexperiment' \
+    'bioconductor-mast' && \ 
+    conda clean -tipsy

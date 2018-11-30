@@ -41,7 +41,7 @@ rule cellranger_premirna_gtf:
         awk 'BEGIN{{FS="\t"; OFS="\t"}} $3 == "transcript"{{ $3="exon"; print}}' {input.gtf} > {output.gtf}
         """
 
-rule cellranger_single_species_mkref:
+rule cellranger_single_species_custom_ref:
     input:
         genome = join(EXT_DIR, 'ensembl', 'genome.fa'),
         filtered_gtf = rules.cellranger_mkgtf.output

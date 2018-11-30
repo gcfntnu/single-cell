@@ -16,7 +16,7 @@ CR_PROCESSED = join(PROCESSED_DIR, 'cellranger')
 REF = config['quant']['reference']
 
 def get_fastq(wildcards):
-    return config['samples'][wildcards.sample]['R1']
+    return join(FASTQ_DIR, config['samples'][wildcards.sample]['R1'])
 
 rule cellranger_count:
     input:
@@ -24,19 +24,15 @@ rule cellranger_count:
         transcriptome = join(CR_EXT, 'reference', ORG, REF, 'reference.json')
     params:
         input = FASTQ_DIR,
-        id = 'sample',
+        id = '{sample}',
         outdir = join(CR_INTERIM, ORG, REF),
         sample = '{sample}',
-        transcriptome = rules.cellranger_single_species_mkref.params.out,
-        ncells = 3000
+        transcriptome = join(CR_EXT, 'reference', ORG, REF),
+        ncells = 1000
     threads:
         8
     output:
-        summary = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'web_summary.html'),
-        filtered_counts_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'filtered_gene_bc_matrices_h5.h5'),
-        filtered_counts_mex = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'filtered_gene_bc_matrices'),
-        counts_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_gene_bc_matrices_h5.h5'),
-        counts_mex = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_gene_bc_matrices'),
+        summary = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'web_summary.html')
     singularity:
         CR_DOCKER
     shell:
@@ -47,6 +43,7 @@ rule cellranger_count:
         '--transcriptome {params.transcriptome} '
         '--expect-cells {params.ncells} '
         '--localcores {threads} '
+        '--chemistry SC3Pv2'
         '&& mv {params.id} {params.outdir}'
 
 rule cellranger_aggr:
@@ -54,7 +51,7 @@ rule cellranger_aggr:
     
 rule seurat_load:
     input:
-        rules.cellranger_count.output.counts_h5
+        expand(join(CR_INTERIM, ORG, REF, '{sample}', 'outs','filtered_feature_bc_matrix'), sample=SAMPLES)
     params:
         script = srcdir('scripts/seurat_load.R')
     output:
@@ -62,16 +59,16 @@ rule seurat_load:
     singularity:
         'docker://gcfntnu/seurat:2.3.4'
     shell:
-        'Rscript {params.script} --input {input} --output {output}'
+        'Rscript {params.script} --input {input[0]} --output {output}'
 
 rule scanpy_load:
     input:
-        rules.cellranger_count.output.counts_h5
+        rules.cellranger_count.output
     params:
-        script = srcdir('scripts/scanpy_load.R')
+        script = srcdir('scripts/scanpy_load.py')
     output:
-        'scanpy/data.anndata'
+        'scanpy/{sample}/data.h5ad'
     singularity:
         'docker://gcfntnu/scanpy:1.3.3'
     shell:
-        'python {params.script} --input {input} --output {output}'
+        'python {params.script} {input} --output {output}'
