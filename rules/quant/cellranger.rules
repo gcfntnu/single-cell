@@ -11,7 +11,6 @@ include:
 
 #config
 FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
-CR_INTERIM = join(INTERIM_DIR, 'cellranger')
 CR_PROCESSED = join(PROCESSED_DIR, 'cellranger')
 REF = config['quant']['reference']
 

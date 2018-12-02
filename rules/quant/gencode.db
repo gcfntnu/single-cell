@@ -17,7 +17,7 @@ DB_CONF = config.get('gencode', {})
 ASSEMBLY = DB_CONF.get('assembly', 'primary_assembly')
 GENCODE_RELEASE = DB_CONF.get('gencode_release', 27)
 GENCODE_VERSION = DB_CONF.get('gencode_version', 'GRCh38')
-TRANSCRIPTOME_TYPE = DB_CONF.get('transcriptome_type') #['prebuilt', 'all', 'chr', 'pri']
+TRANSCRIPTOME_TYPE = DB_CONF.get('transcriptome_type', '') #['pc_','all']
 PROTOCOL = DB_CONF.get('protocol', 'http')
 ERCC = DB_CONF.get('add_ercc', False)
 # includes
@@ -38,9 +38,13 @@ elif ASSEMBLY == 'all':
     GTF = GTF.format(PROTOCOL, GENODE_ORG, GENCODE_RELEASE, GENCODE_RELEASE)
 else:
     raise ValueError('ASSEMBLY option needs to be one of : primary, all')
-    
-GENCODE_TRANSCRIPTOME = 'ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_{}/release_{:}/gencode.v{:}.transcripts.fa.gz'
-GENCODE_TRANSCRIPTOME = GENCODE_TRANSCRIPTOME.format(GENCODE_ORG, GENCODE_RELEASE, GENCODE_RELEASE)
+
+if not TRANSCRIPTOME_TYPE or TRANSCRIPTOME_TYPE == 'all':
+    TRANSCRIPTOME_TYPE = ''
+if TRANSCRIPTOME_TYPE in ['pc', 'protein_coding']:
+    TRANSCRIPTOME_TYPE = 'pc_'
+GENCODE_TRANSCRIPTOME = 'ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_{}/release_{:}/gencode.v{:}.{}transcripts.fa.gz'
+GENCODE_TRANSCRIPTOME = GENCODE_TRANSCRIPTOME.format(GENCODE_ORG, GENCODE_RELEASE, GENCODE_RELEASE, TRANSCRIPTOME_TYPE)
 GENCODE_LNC = 'ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_{}/release_{}/gencode.v{}.lncRNA_transcripts.fa.gz'
 GENCODE_LNC = GENCODE_LNC.format(GENCODE_ORG, GENCODE_RELEASE, GENCODE_RELEASE)
 

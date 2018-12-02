@@ -20,7 +20,7 @@ rule cellranger_mkgtf:
     input:
         gtf = join(EXT_DIR, 'ensembl', 'genes.gtf')
     output:
-        gtf = join(CR_INTERIM, 'ensembl.filtered.gtf')
+        gtf = join(EXT_DIR, 'custom_ensembl', 'genes.gtf')
     params:
         attr = ' '.join(_ATTR)
     singularity:
@@ -47,12 +47,12 @@ rule cellranger_single_species_custom_ref:
         filtered_gtf = rules.cellranger_mkgtf.output
     params:
         dummy_out = 'ensembl_' + ORG,
-        out = join(CR_EXT, 'reference', ORG, 'ensembl')
+        out = join(CR_EXT, 'reference', ORG, 'custom_ensembl')
     output:
-        json = join(CR_EXT, 'reference', ORG, 'ensembl', 'reference.json'),
-        gtf = join(CR_EXT, 'reference', ORG, 'ensembl', 'genes', 'genes.gtf'),
-        fasta = join(CR_EXT, 'reference', ORG, 'ensembl', 'fasta', 'genome.fa'),
-        star_index = join(CR_EXT, 'reference', ORG,'ensembl', 'star', 'SA')
+        json = join(CR_EXT, 'reference', ORG, 'custom_ensembl', 'reference.json'),
+        gtf = join(CR_EXT, 'reference', ORG, 'custom_ensembl', 'genes', 'genes.gtf'),
+        fasta = join(CR_EXT, 'reference', ORG, 'custom_ensembl', 'fasta', 'genome.fa'),
+        star_index = join(CR_EXT, 'reference', ORG, 'custom_ensembl', 'star', 'SA')
     threads:
         48
     singularity:

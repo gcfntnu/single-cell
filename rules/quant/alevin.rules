@@ -1,0 +1,46 @@
+#-*- mode:snakemake -*-
+
+extra_conf_fn = srcdir('alevin.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config2(config, c)
+
+include:
+    'alevin.db'
+
+#config
+FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
+AVN_INTERIM = join(INTERIM_DIR, 'alevin')
+AVN_PROCESSED = join(PROCESSED_DIR, 'alevin')
+REF = config['quant']['reference']
+
+def get_fastq_R1(wildcards):
+    R1 = config['samples'][wildcards.sample]['R1'].split(',')
+    R1 = [join(FASTQ_DIR, fn) for fn in R1]
+    return ' '.join(R1)
+
+def get_fastq_R2(wildcards):
+    R2 = config['samples'][wildcards.sample]['R2'].split(',')
+    R2 = [join(FASTQ_DIR, fn) for fn in R2]
+    return ' '.join(R2)
+
+rule alevin:
+    input:
+        R1 = get_fastq_R1,
+        R2 = get_fastq_R2,
+        ref = join(AVN_EXT, 'reference', ORG, REF, 'salmon')
+    params:
+        args = '-l ISR --chromiumV3',
+        output = join(AVN_PROCESSED, '{sample}')
+    singularity:
+        'docker://flatberg/alevin:dev0.12'
+    output:
+        join(AVN_PROCESSED, '{sample}', 'gene.quant')
+    shell:
+        'salmon alevin '
+        '{params.args} '
+        '-1 {input.R1} '
+        '-2 {input.R2} '
+        '-p {threads} '
+        '-o {params.output} '
