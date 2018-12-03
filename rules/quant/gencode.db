@@ -104,7 +104,7 @@ rule gencode_gtf:
     shell: 
         'wget -O - {params.url} -o {log} | gunzip -c > {output}'
 
-rule gencode_addercc2genome:
+rule gencode_add_ercc2genome:
     input:
         rules.gencode_dna.output,
         rules.ercc_files.output.ercc_fasta

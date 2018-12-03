@@ -17,6 +17,12 @@ REF = config['quant']['reference']
 def get_fastq(wildcards):
     return join(FASTQ_DIR, config['samples'][wildcards.sample]['R1'])
 
+def get_aggr_mol(wildcards):
+    samples = CR_AGGR[wildcards.group]
+    DIR = join(CR_INTERIM, ORG, REF)
+    mol_files = expand(join(DIR, '{sample}', 'outs', 'molecule_info.h5'), sample=samples)
+    return mol_files
+
 rule cellranger_count:
     input:
         fastq = get_fastq,
@@ -31,7 +37,11 @@ rule cellranger_count:
     threads:
         8
     output:
-        summary = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'web_summary.html')
+        summary = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'web_summary.html'),
+        raw_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
+        filt_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
+        mol_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'molecule_info.h5'),
+        mtx = directory(join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_feature_bc_matrix'))   
     singularity:
         CR_DOCKER
     shell:
@@ -82,7 +92,7 @@ rule scanpy_load:
         script = srcdir('scripts/scanpy_load.py'),
         genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else ''
     output:
-        'scanpy/{sample}/data.h5ad'
+        join(CR_PROCESSED, 'scanpy', '{sample}', 'data.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.3.4'
     shell:
