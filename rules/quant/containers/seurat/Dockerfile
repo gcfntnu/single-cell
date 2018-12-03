@@ -46,8 +46,9 @@ RUN conda install --quiet --yes \
     'r-ggplot2' \
     'r-rcolorbrewer' \
     'r-loom' \	     
-    'r-seurat' \
+    'r-seurat=2.3.4' \
     'r-seurat-scripts' \
+    'r-reticulate' \
     'bioconductor-deseq2' \
     'bioconductor-genomeinfodb' \
     'bioconductor-s4vectors ' \

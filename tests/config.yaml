@@ -10,4 +10,5 @@ samples:
     R1: test_sample_S1_L001_R1_001.fastq.gz
     R2: test_sample_S1_L001_R2_001.fastq.gz
     I1: test_sample_S1_L001_I1_001.fastq.gz
-    
+scanpy:
+  genome: 'GRCh38_chr21'

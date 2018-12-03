@@ -45,18 +45,33 @@ rule cellranger_count:
         '--chemistry SC3Pv2'
         '&& mv {params.id} {params.outdir}'
 
+
+rule cellranger_aggr_csv:
+    input:
+        get_aggr_mol
+    output:
+        join(CR_INTERIM, '{group}_aggr.csv')
+    shell:
+        ''
+        
 rule cellranger_aggr:
-    
-    
+    input:
+        csv = rules.cellranger_aggr_csv.output
+    shell:
+        'cellranger aggr '
+        '--csv {input.csv} '
+        '--id {group} '
+        '--normalize=mapped '
+
 rule seurat_load:
     input:
         expand(join(CR_INTERIM, ORG, REF, '{sample}', 'outs','filtered_feature_bc_matrix'), sample=SAMPLES)
     params:
         script = srcdir('scripts/seurat_load.R')
     output:
-        'cellranger_kit/data.rds'
+        join(CR_PROCESSED, 'seurat', '{sample}', 'sdata.rds')
     singularity:
-        'docker://gcfntnu/seurat:2.3.4'
+        'docker://flatberg/seurat:dev-3.0.0'
     shell:
         'Rscript {params.script} --input {input[0]} --output {output}'
 
@@ -64,10 +79,11 @@ rule scanpy_load:
     input:
         rules.cellranger_count.output
     params:
-        script = srcdir('scripts/scanpy_load.py')
+        script = srcdir('scripts/scanpy_load.py'),
+        genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else ''
     output:
         'scanpy/{sample}/data.h5ad'
     singularity:
-        'docker://gcfntnu/scanpy:1.3.3'
+        'docker://gcfntnu/scanpy:1.3.4'
     shell:
-        'python {params.script} {input} --output {output}'
+        'python {params.script} {input} --output {output} {params.genome} '
