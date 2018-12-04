@@ -41,7 +41,8 @@ rule cellranger_count:
         raw_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
         filt_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
         mol_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'molecule_info.h5'),
-        mtx = directory(join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_feature_bc_matrix'))   
+        raw_mtx = directory(join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_feature_bc_matrix')),
+        filt_mtx = directory(join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'filtered_feature_bc_matrix'))
     singularity:
         CR_DOCKER
     shell:
@@ -81,13 +82,13 @@ rule seurat_load:
     output:
         join(CR_PROCESSED, 'seurat', '{sample}', 'sdata.rds')
     singularity:
-        'docker://flatberg/seurat:dev-3.0.0'
+        'docker://flatberg/seurat:dev-3.0.1'
     shell:
-        'Rscript {params.script} --input {input[0]} --output {output}'
+        'Rscript {params.script} --input {input} --output {output}'
 
 rule scanpy_load:
     input:
-        rules.cellranger_count.output
+        rules.cellranger_count.output.filt_h5
     params:
         script = srcdir('scripts/scanpy_load.py'),
         genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else ''
@@ -96,4 +97,4 @@ rule scanpy_load:
     singularity:
         'docker://gcfntnu/scanpy:1.3.4'
     shell:
-        'python {params.script} {input} --output {output} {params.genome} '
+        'python {params.script} -i {input} -o {output} {params.genome} '

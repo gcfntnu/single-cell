@@ -11,3 +11,5 @@ if os.path.exists(extra_conf_fn):
 
 include:
     'quant/cellranger.rules'
+include:
+    'quant/alevin.rules'

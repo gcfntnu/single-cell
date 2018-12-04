@@ -83,4 +83,12 @@ rule cellranger_prebuilt_reference:
         star_index = join(CR_EXT, 'reference', ORG,'10xgenomics', 'star', 'SA')
     shell:
         'curl {params.url} | tar xvz --strip-components=1 -C {params.out}'
-    
+
+rule cellranger_transcriptome:
+    input:
+        gtf = join(CR_EXT, 'reference', ORG, '{reference_db}', 'genes', 'genes.gtf'),
+        genome = join(CR_EXT, 'reference', ORG, '{reference_db}', 'fasta', 'genome.fa')
+    output:
+        join(CR_EXT, 'reference', ORG, '{reference_db}', 'fasta', 'transcriptome.fa')
+    shell:
+        'gffread -w {output} -g {input.genome} {input.gtf}'

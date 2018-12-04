@@ -2,6 +2,7 @@ FROM ubuntu:18.04
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH /opt/conda/bin:$PATH
+ENV MPLBACKEND TkAgg
 
 RUN apt-get update --fix-missing && \
     apt-get install -y wget build-essential git && \
@@ -26,7 +27,7 @@ RUN conda config --add channels r
 RUN conda config --add channels bioconda
 RUN conda config --add channels conda-forge
 
-RUN conda install --quiet --yes scanpy bioservices pip dask dca pypairs numba zappy multicore-tsne cython tasklogger>=0.4.0 graphtools>=0.2.0 tqdm python-annoy joblib scprep 
+RUN conda install --quiet --yes scanpy bioservices pip dask dca pypairs numba zappy multicore-tsne cython tasklogger>=0.4.0 graphtools>=0.2.0 tqdm python-annoy joblib scprep pandas numpy scipy matplotlib
 RUN conda clean -tipsy
 
 RUN pip --no-cache-dir install phate fa2 bbknn magic-impute leidenalg

@@ -22,32 +22,23 @@ rule alevin_custom_transcriptome:
         '-w {output} '
         '-g {input.genome} '
         '{input.gtf} '
-
-rule alevin_transcriptome:
-    input:
-        cdna = join(EXT_DIR, '{reference_db}', 'cdna.fa')
-    output:
-        join(AVN_EXT, 'reference', ORG, '{reference_db}', 'fasta', 'transcriptome.fa')
-    shell:
-        'ln {input} {output}'
         
 rule alevin_tgmap:
-    shell:
-    """
-    bioawk -c gff '$feature=="transcript" {print $group}' <(gunzip -c gencode.v28.annotation.gtf.gz) | awk -F ' ' '{print substr($4,2,length($4)-3) "\t" substr($2,2,length($2)-3)}' - > txp2gene.tsv
-    """
+    shell:"""bioawk -c gff '$feature=="transcript" {print $group}' <(gunzip -c gencode.v28.annotation.gtf.gz) | awk -F ' ' '{print substr($4,2,length($4)-3) "\t" substr($2,2,length($2)-3)}' - > txp2gene.tsv"""
     
 rule alevin_whitelist:
 
 rule alevin_index:
     input:
-        transcriptome = rules.alevin_transcriptome.output
+        transcriptome = join(CR_EXT, 'reference', ORG, '{reference_db}', 'fasta', 'transcriptome.fa')
     output:
         join(AVN_EXT, 'reference', ORG, '{reference_db}', 'salmon', 'refInfo.json')
     params:
         out = join(AVN_EXT, 'reference', ORG, '{reference_db}', 'salmon')
     threads:
         16
+    singularity:
+        'docker://flatberg/alevin:dev0.12'
     shell:
         'salmon index '
         '--perfectHash '
