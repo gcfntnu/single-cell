@@ -13,3 +13,5 @@ include:
     'quant/cellranger.rules'
 include:
     'quant/alevin.rules'
+include:
+    'quant/umitools.rules'

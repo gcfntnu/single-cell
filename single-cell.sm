@@ -24,7 +24,7 @@ from snakemake.utils import update_config
 def update_config2(config, extra_config):
     """Recursively update dictionary config with overwrite_config.
 
-    From Snakemake codebase (update_config), this does not overwrite if key exist
+    From Snakemake codebase (update_config), UPDATE_CONFIG2 does not overwrite if key exist!
 
     See
     http://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
@@ -69,8 +69,11 @@ if SAMPLES:
     SAMPLES = list(SAMPLES.keys())
 
 include:
+    'rules/db.rules'
+include:
     'rules/quant.rules'
 
+    
 onsuccess:
     # write config
     from datetime import datetime
@@ -89,4 +92,4 @@ onsuccess:
         raise ValueError('this is just too many runs on the same day')
     
     with open(final_conf_fn, 'w') as fh:
-        yaml.dump(config, fh, default_flow_style=False)
+        #yaml.dump(config, fh, default_flow_style=False)
