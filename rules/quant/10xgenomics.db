@@ -92,3 +92,8 @@ rule cellranger_transcriptome:
         join(CR_EXT, 'reference', ORG, '{reference_db}', 'fasta', 'transcriptome.fa')
     shell:
         'gffread -w {output} -g {input.genome} {input.gtf}'
+
+
+rule cellranger_whitelist:
+    shell:
+        'tar --extract --file=cellranger-3.0.0.tar.gz -O cellranger-3.0.0/cellranger-cs/3.0.0/lib/python/cellranger/barcodes/3M-february-2018.txt.gz | gunzip -c > 3M-february-2018.txt'

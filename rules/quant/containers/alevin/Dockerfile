@@ -28,6 +28,14 @@ RUN git clone https://github.com/COMBINE-lab/salmon.git --branch develop  && \
   make && make install && \
   cd && \
   rm -rf salmon/
-
 ENV PATH /opt/salmon/bin:$PATH
 ENV LD_LIBRARY_PATH /opt/salmon/lib:$LD_LIBRARY_PATH
+
+RUN \
+  mkdir -p /opt/gffread && \
+  cd /opt/gffread && \
+  git clone https://github.com/gpertea/gclib && \
+  git clone https://github.com/gpertea/gffread && \
+  cd gffread && \
+  make release
+ENV PATH /opt/gffread/gffread:$PATH
