@@ -1,0 +1,77 @@
+#-*- mode:snakemake -*-
+"""10xgenomics external data and reference/index builds
+"""
+
+from os.path import join
+
+extra_conf_fn = srcdir('10xgenomics.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config2(config, c)
+
+# config
+ORG = config.get('organism', 'homo_sapiens')
+TX_EXT = join('da', '10xgenomics')
+TX_CONFIG = config.get('10xgenomics', {})
+
+rule txgenomics_whitelist:
+    input:
+        url = TX_CONFIG['cellranger_url']
+    params:
+        fn = 'cellranger-3.0.0/cellranger-cs/3.0.0/lib/python/cellranger/barcodes/3M-february-2018.txt.gz'
+    output:
+        join(TX_EXT, 'whitelist.txt')
+    shadow:
+        'shallow'
+    shell:
+        'curl -o cellranger-3.0.0.tar.gz {input.url} && tar --extract --file=cellranger-3.0.0.tar.gz -O {params.fn} | gunzip -c > {output}'
+
+rule txgenomics_org_prebuild:
+    params:
+        url = TX_CONFIG['prebuilds'][ORG],
+        out = TX_EXT
+    output:
+        json = join(TX_EXT, 'reference.json'),
+        gtf = join(TX_EXT, 'genes', 'genes.gtf'),
+        fasta = join(TX_EXT, 'fasta', 'genome.fa'),
+        star_index = join(TX_EXT, 'star', 'SA')
+    shell:
+        'curl {params.url} | tar xvz --strip-components=1 -C {params.out}'
+
+rule txgenomics_transcriptome:
+    input:
+        gtf = join(TX_EXT, 'genes', 'genes.gtf'),
+        genome = join(TX_EXT, 'fasta', 'genome.fa')
+    output:
+        join(TX_EXT, 'fasta', 'transcriptome.fa')
+    shell:
+        'gffread -w {output} -g {input.genome} {input.gtf}'
+        
+rule txgenomics_transcriptome_index:
+    input:
+        transcriptome = join(TX_EXT, 'fasta', 'transcriptome.fa')
+    output:
+        join(TX_EXT, 'salmon', 'refInfo.json')
+    params:
+        out = join(TX_EXT, 'salmon')
+    threads:
+        16
+    singularity:
+        'docker://flatberg/alevin:dev0.12'
+    shell:
+        'salmon index '
+        '--perfectHash '
+        '--threads {threads} '
+        '--index {params.out} '
+        '--transcripts {input.transcriptome}'
+
+rule txgenomics_db_downloads:
+    input:
+        ref = join(TX_EXT, 'reference.json'),
+        whitelist = join(TX_EXT, 'whitelist.txt')
+
+rule txgenomics_db_all:
+    input:
+       whitelist = join(TX_EXT, 'whitelist.txt'),
+       salmon_index = join(TX_EXT, 'salmon', 'refInfo.json')
