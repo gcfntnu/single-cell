@@ -74,7 +74,7 @@ rule cellranger_aggr:
         '--id {group} '
         '--normalize=mapped '
 
-rule seurat_load:
+rule cellranger_seurat:
     input:
         expand(join(CR_INTERIM, ORG, REF, '{sample}', 'outs','filtered_feature_bc_matrix'), sample=SAMPLES)
     params:
@@ -86,7 +86,7 @@ rule seurat_load:
     shell:
         'Rscript {params.script} --input {input} --output {output}'
 
-rule scanpy_load:
+rule cellranger_scanpy:
     input:
         rules.cellranger_count.output.filt_h5
     params:

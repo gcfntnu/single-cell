@@ -43,6 +43,7 @@ if not TRANSCRIPTOME_TYPE or TRANSCRIPTOME_TYPE == 'all':
     TRANSCRIPTOME_TYPE = ''
 if TRANSCRIPTOME_TYPE in ['pc', 'protein_coding']:
     TRANSCRIPTOME_TYPE = 'pc_'
+    
 GENCODE_TRANSCRIPTOME = 'ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_{}/release_{:}/gencode.v{:}.{}transcripts.fa.gz'
 GENCODE_TRANSCRIPTOME = GENCODE_TRANSCRIPTOME.format(GENCODE_ORG, GENCODE_RELEASE, GENCODE_RELEASE, TRANSCRIPTOME_TYPE)
 GENCODE_LNC = 'ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_{}/release_{}/gencode.v{}.lncRNA_transcripts.fa.gz'
