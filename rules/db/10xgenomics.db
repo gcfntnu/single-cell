@@ -1,5 +1,8 @@
 #-*- mode:snakemake -*-
 """10xgenomics external data and reference/index builds
+
+support.10xgenomics.com/single-cell-gene-expression/software/downloads
+
 """
 
 from os.path import join
@@ -12,7 +15,7 @@ if os.path.exists(extra_conf_fn):
 
 # config
 ORG = config.get('organism', 'homo_sapiens')
-TX_EXT = join('da', '10xgenomics')
+TX_EXT = join(EXT_DIR, '10xgenomics')
 TX_CONFIG = config.get('10xgenomics', {})
 
 rule txgenomics_whitelist:

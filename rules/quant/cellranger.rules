@@ -6,12 +6,12 @@ if os.path.exists(extra_conf_fn):
         c  = yaml.load(fh) or {}
         update_config2(config, c)
 
-include:
-    'cellranger.db'
-
 #config
+ORG = config.get('organism', 'homo_sapiens')
 FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 CR_PROCESSED = join(PROCESSED_DIR, 'cellranger')
+CR_INTERIM = join(INTERIM_DIR, 'cellranger')
+CR_CONF = config.get('cellranger')
 REF = config['quant']['reference']
 
 def get_fastq(wildcards):
@@ -26,25 +26,25 @@ def get_aggr_mol(wildcards):
 rule cellranger_count:
     input:
         fastq = get_fastq,
-        transcriptome = join(CR_EXT, 'reference', ORG, REF, 'reference.json')
+        transcriptome = join(EXT_DIR, REF, 'reference.json')
     params:
         input = FASTQ_DIR,
         id = '{sample}',
-        outdir = join(CR_INTERIM, ORG, REF),
+        outdir = join(CR_INTERIM, REF),
         sample = '{sample}',
-        transcriptome = join(CR_EXT, 'reference', ORG, REF),
+        transcriptome = join(EXT_DIR, REF),
         ncells = 1000
     threads:
         8
     output:
-        summary = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'web_summary.html'),
-        raw_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
-        filt_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
-        mol_h5 = join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'molecule_info.h5'),
-        raw_mtx = directory(join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'raw_feature_bc_matrix')),
-        filt_mtx = directory(join(CR_INTERIM, ORG, REF, '{sample}', 'outs', 'filtered_feature_bc_matrix'))
+        summary = join(CR_INTERIM, REF, '{sample}', 'outs', 'web_summary.html'),
+        raw_h5 = join(CR_INTERIM, REF, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
+        filt_h5 = join(CR_INTERIM, REF, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
+        mol_h5 = join(CR_INTERIM, REF, '{sample}', 'outs', 'molecule_info.h5'),
+        raw_mtx = directory(join(CR_INTERIM, REF, '{sample}', 'outs', 'raw_feature_bc_matrix')),
+        filt_mtx = directory(join(CR_INTERIM, REF, '{sample}', 'outs', 'filtered_feature_bc_matrix'))
     singularity:
-        CR_DOCKER
+        CR_CONF['docker']
     shell:
         'cellranger count '
         '--fastqs {params.input} '
@@ -76,7 +76,7 @@ rule cellranger_aggr:
 
 rule cellranger_seurat:
     input:
-        expand(join(CR_INTERIM, ORG, REF, '{sample}', 'outs','filtered_feature_bc_matrix'), sample=SAMPLES)
+        expand(join(CR_INTERIM, REF, '{sample}', 'outs','filtered_feature_bc_matrix'), sample=SAMPLES)
     params:
         script = srcdir('scripts/seurat_load.R')
     output:

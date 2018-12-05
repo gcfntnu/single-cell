@@ -135,21 +135,169 @@ rule ensembl_add_ercc2gtf:
     shell:
         'cat {input} > {output}'
 
-rule ensembl_all:
+rule ensembl_db_downloads:
     input:
         genome = rules.ensembl_add_ercc2genome.output if ERCC else rules.ensembl_dna.output,
         cdna = rules.ensembl_add_ercc2cdna.output if ERCC else rules.ensembl_cdna.output,
         noncoding = rules.ensembl_noncoding.output,
         gtf = rules.ensembl_add_ercc2gtf.output if ERCC else rules.ensembl_gtf.output,
     output:
-        genome = join(ENSEMBL_EXT, 'genome.fa'),
-        cdna = join(ENSEMBL_EXT, 'cdna.fa'),
-        gtf = join(ENSEMBL_EXT, 'genes.gtf'),
-        noncoding = join(ENSEMBL_EXT, 'ncdna.fa')
+        genome = join(ENSEMBL_EXT, 'fasta', 'genome.fa'),
+        cdna = join(ENSEMBL_EXT, 'fasta', 'transcriptome.fa'),
+        gtf = join(ENSEMBL_EXT, 'genes', 'genes.gtf'),
+        noncoding = join(ENSEMBL_EXT, 'fasta', 'ncdna.fa')
     shell:
         """
-        ln {input.genome} {output.genome}
-        ln {input.cdna} {output.cdna}
-        ln {input.gtf} {output.gtf}
-        ln {input.noncoding} {output.noncoding}
+        ln -s {input.genome} {output.genome}
+        ln -s {input.cdna} {output.cdna}
+        ln -s {input.gtf} {output.gtf}
+        ln -s {input.noncoding} {output.noncoding}
         """
+
+rule ensembl_index_genome:
+    input:
+        join(ENSEMBL_EXT, 'fasta', 'genome.fa')
+    output:
+        join(ENSEMBL_EXT, 'fasta', 'genome.fai')
+    singularity:
+        'docker://gcfntnu/ensembl:0.1'
+    shell:
+        'samtools index {input}'
+        
+rule ensembl_sequence_dict:
+    input:
+        join(ENSEMBL_EXT, 'fasta', 'genome.fa')
+    output:
+        join(ENSEMBL_EXT, 'fasta', 'genome.dict')
+    singularity:
+        'docker://gcfntnu/ensembl:0.1'    
+    shell:
+        'picard CreateSequenceDictionary -Xms2g -Xmx2g R={input} O={output}'
+
+rule ensembl_star_genome_index:
+    input: 
+        genome = join(ENSEMBL_EXT, 'fasta', 'genome.fa'),
+        gtf = join(ENSEMBL_EXT, 'genes', 'genes.gtf')
+    output:
+         join(ENSEMBL_EXT, 'star', 'SA')
+    params:
+        index_dir =  join(ENSEMBL_EXT, 'star'),
+        readlength = '100'
+    threads:
+        24
+    log:
+        join(ENSEMBL_EXT, 'logs', 'STAR.index.log')
+    singularity:
+        'docker://gcfntnu/ensembl:0.1' 
+    shell:
+        'STAR '
+        '--runThreadN {threads} '
+        '--runMode genomeGenerate '
+        '--genomeDir {params.index_dir} '
+        '--genomeFastaFiles {input.genome} '
+        '--sjdbGTFfile {input.gtf} '
+        '--sjdbOverhang {params.readlength} '
+        
+rule ensembl_hisat2_genome_index:
+    input:
+        genome = join(ENSEMBL_EXT, 'fasta', 'genome.fa')
+    params:
+        index_dir =  join(ENSEMBL_EXT, 'hisat2')
+    output:
+         join(ENSEMBL_EXT, 'hisat2', 'genome.1.ht2')
+    threads:
+        24
+    log:
+        join(ENSEMBL_EXT, 'logs', 'HISAT2.index.log')
+    singularity:
+        'docker://gcfntnu/ensembl:0.1' 
+    shell:
+        'hisat2-build '
+        '-f '
+        '-p {threads} '
+        '{input.genome} '
+        '{params.index_dir}'
+
+rule ensembl_bowtie2_genome_index:
+    input:
+        genome = join(ENSEMBL_EXT, 'fasta', 'genome.fa')
+    params:
+        index_dir =  join(ENSEMBL_EXT, 'bowtie2')
+    output:
+         join(ENSEMBL_EXT, 'bowtie2', 'genome.1.bt2')
+    threads:
+        24
+    log:
+        join(ENSEMBL_EXT, 'logs', 'BOWTIE2.index.log')
+    singularity:
+        'docker://gcfntnu/ensembl:0.1'   
+    shell:
+        'bowtie2-build --threads {threads} {input.genome} {params.index_dir}'
+
+rule ensembl_bowtie_genome_index:
+    input:
+        genome = join(ENSEMBL_EXT, 'fasta', 'genome.fa')
+    params:
+        index_dir =  join(ENSEMBL_EXT, 'bowtie')
+    output:
+         join(ENSEMBL_EXT, 'bowtie', 'genome.1.ebwt')
+    threads:
+        24
+    log:
+        join(ENSEMBL_EXT, 'logs', 'BOWTIE.index.log')
+    singularity:
+        'docker://gcfntnu/ensembl:0.1'
+    shell:
+        'bowtie-build {input.genome} {params.index_dir}'
+        
+rule ensembl_novoalign_genome_index:
+    input:
+        genome = join(ENSEMBL_EXT, 'fasta', 'genome.fa')
+    output:
+         join(ENSEMBL_EXT, 'novoalign', 'genome.idx')
+    threads:
+        24
+    log:
+        join(ENSEMBL_EXT, 'logs', 'NOVOALIGN.index.log')
+    singularity:
+        'docker://gcfntnu/ensembl:0.1'
+    shell:
+        'novoindex -t {threads} {output} {input.genome}'
+        
+rule ensembl_kallisto_transcriptome_index:
+    input:
+        transcriptome = join(ENSEMBL_EXT, 'fasta', 'transcriptome.fa')
+    output:
+         join(ENSEMBL_EXT, 'kallisto', 'genome.idx')
+    params:
+        '-k 31'
+    log:
+        join(ENSEMBL_EXT, 'logs', 'KALLISTO.index.log')
+    singularity:
+        'docker://gcfntnu/ensembl:0.1'
+    shell:
+        'kallisto index '
+        '--index={output} '
+        '{params} '
+        '{input.transcriptome} '
+      
+rule ensembl_salmon_transcriptome_index:
+    input:
+        transcriptome = join(ENSEMBL_EXT, 'fasta', 'transcriptome.fa')
+    params:
+        args = '--perfectHash -k 31 ',
+        index_dir = join(ENSEMBL_EXT, 'salmon')
+    output:
+        join(ENSEMBL_EXT, 'salmon', 'refInfo.json')
+    log:
+        join(ENSEMBL_EXT, 'logs', 'SALMON.index.log')
+    singularity:
+        'docker://gcfntnu/ensembl:0.1'
+    threads:
+        24
+    shell:
+        'salmon index '
+        '{params.args} '
+        '-i {params.index_dir} '
+        '--transcripts  {input.transcriptome} '
+        '--threads {threads} '

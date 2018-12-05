@@ -91,5 +91,5 @@ onsuccess:
     if os.path.exists(final_conf_fn):
         raise ValueError('this is just too many runs on the same day')
     
-    with open(final_conf_fn, 'w') as fh:
+    #with open(final_conf_fn, 'w') as fh:
         #yaml.dump(config, fh, default_flow_style=False)

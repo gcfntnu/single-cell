@@ -6,9 +6,6 @@ if os.path.exists(extra_conf_fn):
         c  = yaml.load(fh) or {}
         update_config2(config, c)
 
-include:
-    'alevin.db'
-
 #config
 FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 AVN_INTERIM = join(INTERIM_DIR, 'alevin')
@@ -25,11 +22,11 @@ def get_fastq_R2(wildcards):
     R2 = [join(FASTQ_DIR, fn) for fn in R2]
     return ' '.join(R2)
 
-rule alevin:
+rule alevin_quasi:
     input:
         R1 = get_fastq_R1,
         R2 = get_fastq_R2,
-        ref = join(AVN_EXT, 'reference', ORG, REF, 'salmon')
+        ref = join(EXT_DIR, REF, 'salmon')
     params:
         args = '-l ISR --chromiumV3',
         output = join(AVN_PROCESSED, '{sample}')

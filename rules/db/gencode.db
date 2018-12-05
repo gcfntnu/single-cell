@@ -1,5 +1,11 @@
 #-*-mode:snakemake-*-
+"""Gencode external data and reference/index builds
 
+Gencode is for human/mouse/rat only.
+
+www.gencodegenes.org
+
+"""
 import os
 import string
 
@@ -20,6 +26,7 @@ GENCODE_VERSION = DB_CONF.get('gencode_version', 'GRCh38')
 TRANSCRIPTOME_TYPE = DB_CONF.get('transcriptome_type', '') #['pc_','all']
 PROTOCOL = DB_CONF.get('protocol', 'http')
 ERCC = DB_CONF.get('add_ercc', False)
+
 # includes
 if ERCC:
     include:
@@ -141,21 +148,21 @@ rule gencode_add_ercc2gtf:
     shell:
         'cat {input} > {output}'
 
-rule gencode_all:
+rule gencode_db_downloads:
     input:
         genome = rules.gencode_add_ercc2genome.output if ERCC else rules.gencode_dna.output,
         cdna = rules.gencode_add_ercc2cdna.output if ERCC else rules.gencode_cdna.output,
         noncoding = rules.gencode_noncoding.output,
         gtf = rules.gencode_add_ercc2gtf.output if ERCC else rules.gencode_gtf.output,
     output:
-        genome = join(GENCODE_EXT, 'genome.fa'),
-        cdna = join(GENCODE_EXT, 'cdna.fa'),
-        gtf = join(GENCODE_EXT, 'genes.gtf'),
-        noncoding = join(GENCODE_EXT, 'ncdna.fa')
+        genome = join(GENCODE_EXT, 'fasta', 'genome.fa'),
+        cdna = join(GENCODE_EXT, 'fasta', 'cdna.fa'),
+        gtf = join(GENCODE_EXT, 'genes', 'genes.gtf'),
+        noncoding = join(GENCODE_EXT, 'fasta', 'ncdna.fa')
     shell:
         """
-        ln {input.genome} {output.genome}
-        ln {input.cdna} {output.cdna}
-        ln {input.gtf} {output.gtf}
-        ln {input.noncoding} {output.noncoding}
+        ln -s {input.genome} {output.genome}
+        ln -s {input.cdna} {output.cdna}
+        ln -s {input.gtf} {output.gtf}
+        ln -s {input.noncoding} {output.noncoding}
         """
