@@ -51,7 +51,7 @@ rule txgenomics_transcriptome:
     shell:
         'gffread -w {output} -g {input.genome} {input.gtf}'
         
-rule txgenomics_transcriptome_index:
+rule txgenomics_alevin_index:
     input:
         transcriptome = join(TX_EXT, 'fasta', 'transcriptome.fa')
     output:

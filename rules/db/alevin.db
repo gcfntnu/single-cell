@@ -1,40 +1,35 @@
 #-*- mode:snakemake -*-
 AVN_EXT = join(EXT_DIR, 'alevin')
 ORG = config.get('organism', 'homo_sapiens')
-AVN_DOCKER = CR_CONFIG.get('docker', 'docker://flatberg/alevin:dev0.12')
+AVN_CONFIG = config.get('alevin', {})
+AVN_DOCKER = AVN_CONFIG.get('docker', 'docker://flatberg/alevin:dev0.12')
 
 include:
     'ensembl.db'
 include:
     'gencode.db'
 include:
-    'cellranger.db'
+    '10xgenomics.db'
 
 
-rule alevin_custom_transcriptome:
+rule alevin_transcriptome:
     input:
-        genome = join(CR_EXT, 'reference', ORG, '{reference_db}', 'fasta', 'genome.fa'),
-        gtf = join(CR_EXT, 'reference', ORG, 'custom_{reference_db}', 'genes', 'genes.gtf')
+        gtf = join(EXT_DIR, '{reference_db}', 'genes', 'genes.gtf'),
+        genome = join(EXT_DIR, '{reference_db}', 'fasta', 'genome.fa')
     output:
-        join(AVN_EXT, 'reference', ORG, 'custom_{reference_db}', 'fasta', 'transcriptome.fa')
+        join(EXT_DIR, '{reference_db}', 'fasta', 'transcriptome.fa')
+    singularity:
+        'docker://flatberg/alevin:dev0.12'
     shell:
-        'gffread '
-        '-w {output} '
-        '-g {input.genome} '
-        '{input.gtf} '
+        'gffread -w {output} -g {input.genome} {input.gtf}'
         
-rule alevin_tgmap:
-    shell:"""bioawk -c gff '$feature=="transcript" {print $group}' <(gunzip -c gencode.v28.annotation.gtf.gz) | awk -F ' ' '{print substr($4,2,length($4)-3) "\t" substr($2,2,length($2)-3)}' - > txp2gene.tsv"""
-    
-rule alevin_whitelist:
-
 rule alevin_index:
     input:
-        transcriptome = join(CR_EXT, 'reference', ORG, '{reference_db}', 'fasta', 'transcriptome.fa')
+        transcriptome = join(EXT_DIR, '{reference_db}', 'fasta', 'transcriptome.fa')
     output:
-        join(AVN_EXT, 'reference', ORG, '{reference_db}', 'salmon', 'refInfo.json')
+        join(EXT_DIR, '{reference_db}', 'salmon', 'refInfo.json')
     params:
-        out = join(AVN_EXT, 'reference', ORG, '{reference_db}', 'salmon')
+        out = join(EXT_DIR, '{reference_db}', 'salmon')
     threads:
         16
     singularity:
@@ -45,4 +40,11 @@ rule alevin_index:
         '--threads {threads} '
         '--index {params.out} '
         '--transcripts {input.transcriptome}'
-
+        
+rule alevin_tgmap:
+    input:
+        gtf = join(EXT_DIR, '{reference_db}', 'genes', 'genes.gtf')
+    output:
+        join(EXT_DIR, '{reference_db}', 'genes', 'txp2gene.tsv')
+        
+    shell:"""bioawk -c gff '$feature=="transcript" {print $group}' {input} | awk -F '{{print substr($4,2,length($4)-3) "\t" substr($2,2,length($2)-3)}}' - > {output}"""

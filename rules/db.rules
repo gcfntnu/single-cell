@@ -11,3 +11,5 @@ include:
     'db/gencode.db'
 include:
     'db/10xgenomics.db'
+include:
+    'db/alevin.db'

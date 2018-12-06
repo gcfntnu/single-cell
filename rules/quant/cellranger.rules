@@ -30,12 +30,12 @@ rule cellranger_count:
     params:
         input = FASTQ_DIR,
         id = '{sample}',
-        outdir = join(CR_INTERIM, REF),
+        outdir = join(CR_INTERIM, REF, '{sample}'),
         sample = '{sample}',
         transcriptome = join(EXT_DIR, REF),
         ncells = 1000
     threads:
-        8
+        16
     output:
         summary = join(CR_INTERIM, REF, '{sample}', 'outs', 'web_summary.html'),
         raw_h5 = join(CR_INTERIM, REF, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
@@ -53,9 +53,8 @@ rule cellranger_count:
         '--transcriptome {params.transcriptome} '
         '--expect-cells {params.ncells} '
         '--localcores {threads} '
-        '--chemistry SC3Pv2'
-        '&& mv {params.id} {params.outdir}'
-
+        '&& mv {params.id}/* {params.outdir}/ '
+        '&& rmdir {params.id}'
 
 rule cellranger_aggr_csv:
     input:

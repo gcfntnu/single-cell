@@ -22,21 +22,31 @@ def get_fastq_R2(wildcards):
     R2 = [join(FASTQ_DIR, fn) for fn in R2]
     return ' '.join(R2)
 
+rule alevin_10xgenomics_whitelist:
+    input:
+        join(INTERIM_DIR, '10xgenomics', REF, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
+    output:
+        join(AVN_INTERIM, 'whitelists', '{sample}', 'whitelist.txt')
+    shell:
+        'zcat {input} > {output}'
+                     
 rule alevin_quasi:
     input:
         R1 = get_fastq_R1,
         R2 = get_fastq_R2,
-        ref = join(EXT_DIR, REF, 'salmon')
+        ref = join(EXT_DIR, REF, 'salmon', 'refInfo.json')
     params:
         args = '-l ISR --chromiumV3',
-        output = join(AVN_PROCESSED, '{sample}')
+        output = join(AVN_PROCESSED, '{sample}'),
+        ref = join(EXT_DIR, REF, 'salmon')
     singularity:
         'docker://flatberg/alevin:dev0.12'
     output:
-        join(AVN_PROCESSED, '{sample}', 'gene.quant')
+        join(AVN_PROCESSED, '{sample}', 'quants_mat.gz')
     shell:
         'salmon alevin '
         '{params.args} '
+        '-i {params.ref} '
         '-1 {input.R1} '
         '-2 {input.R2} '
         '-p {threads} '

@@ -5,6 +5,7 @@ ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 RUN apt-get update --fix-missing && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y \
   wget \
+  ca-certificates \
   git \
   unzip \
   build-essential \
