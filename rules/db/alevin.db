@@ -46,5 +46,9 @@ rule alevin_tgmap:
         gtf = join(EXT_DIR, '{reference_db}', 'genes', 'genes.gtf')
     output:
         join(EXT_DIR, '{reference_db}', 'genes', 'txp2gene.tsv')
-        
-    shell:"""bioawk -c gff '$feature=="transcript" {print $group}' {input} | awk -F '{{print substr($4,2,length($4)-3) "\t" substr($2,2,length($2)-3)}}' - > {output}"""
+    singularity:
+        'docker://flatberg/alevin:dev0.12'
+    shell:
+        """
+        bioawk -c gff '$feature=="transcript" {{print $group}}' {input.gtf} | awk -F ' ' '{{print substr($6,2,length($6)-3) "\\t" substr($2,2,length($2)-3)}}' > {output}
+        """

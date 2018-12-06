@@ -77,7 +77,7 @@ rule cellranger_seurat:
     input:
         expand(join(CR_INTERIM, REF, '{sample}', 'outs','filtered_feature_bc_matrix'), sample=SAMPLES)
     params:
-        script = srcdir('scripts/seurat_load.R')
+        script = srcdir('scripts/cellranger_seurat.R')
     output:
         join(CR_PROCESSED, 'seurat', '{sample}', 'sdata.rds')
     singularity:
@@ -89,7 +89,7 @@ rule cellranger_scanpy:
     input:
         rules.cellranger_count.output.filt_h5
     params:
-        script = srcdir('scripts/scanpy_load.py'),
+        script = srcdir('scripts/cellranger_scanpy.py'),
         genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else ''
     output:
         join(CR_PROCESSED, 'scanpy', '{sample}', 'data.h5ad')

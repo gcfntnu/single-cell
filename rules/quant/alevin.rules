@@ -34,7 +34,8 @@ rule alevin_quasi:
     input:
         R1 = get_fastq_R1,
         R2 = get_fastq_R2,
-        ref = join(EXT_DIR, REF, 'salmon', 'refInfo.json')
+        ref = join(EXT_DIR, REF, 'salmon', 'refInfo.json'),
+        t2g = join(EXT_DIR, REF, 'genes', 'txp2gene.tsv')
     params:
         args = '-l ISR --chromiumV3',
         output = join(AVN_PROCESSED, '{sample}'),
@@ -42,11 +43,12 @@ rule alevin_quasi:
     singularity:
         'docker://flatberg/alevin:dev0.12'
     output:
-        join(AVN_PROCESSED, '{sample}', 'quants_mat.gz')
+        join(AVN_PROCESSED, '{sample}', 'alevin', 'quants_mat.gz')
     shell:
         'salmon alevin '
         '{params.args} '
         '-i {params.ref} '
+        '--tgMap {input.t2g} '
         '-1 {input.R1} '
         '-2 {input.R2} '
         '-p {threads} '
