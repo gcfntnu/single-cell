@@ -14,19 +14,63 @@ FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 UMI_PROCESSED = join(PROCESSED_DIR, 'umitools')
 REF = config['quant']['reference']
 
-def get_fastq(wildcards):
+def get_fastq_R1(wildcards):
+    return join(FASTQ_DIR, config['samples'][wildcards.sample]['R1'])
+
+def get_fastq_R2(wildcards):
     return join(FASTQ_DIR, config['samples'][wildcards.sample]['R1'])
 
 rule umitools_whitelist:
     input:
-        R1 = get_fastq
+        R1 = get_fastq_R1
     params:
         '--bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN --set-cell-number=1000'
     output:
-        'data/tmp/umitools/whitelist.txt'
+        'data/tmp/umitools/{sample}/whitelist.txt'
+    singularity:
+        'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
     shell:
         'umi_tools whitelist '
         '--stdin {input.R1} '
         '--log2stderr '
         '> {output}'
 
+rule umitools_extract:
+    input:
+        R1 = get_fastq_R1,
+        R2 = get_fastq_R2,
+        whitelist = rules.umitools_whitelist.output
+    params:
+        '--bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN --filter-cell-barcode '
+    output:
+        R1 = 'data/tmp/umitools/{sample}/{sample}_R1.fastq.gz',
+        R2 = 'data/tmp/umitools/{sample}/{sample}_R2.fastq.gz'
+    singularity:
+        'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
+    shell:
+        'umi_tools extract '
+        '--stdin {input.R1} '
+        '--read2-in {input.R2} '
+        '--stdout {output.R1} '
+        '--read2-out {output.R2} '
+        '--whitelist {input.whitelist} '
+        '{params}'
+
+rule umitools_align_star:
+    input:
+        rules.umitools_extract.output
+    output:
+        bam = 'Aligned.sortedByCoord.out.bam'
+    singularity:
+        'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
+    threads:
+        16
+    shell:
+        'STAR '
+
+
+rule umitools_assign_genes:
+
+
+rule umitools_quant:
+    

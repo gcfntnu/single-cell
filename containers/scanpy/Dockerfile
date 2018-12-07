@@ -44,3 +44,5 @@ RUN pip --no-cache-dir install phate fa2 bbknn magic-impute leidenalg
 #RUN git clone --recursive git://github.com/KrishnaswamyLab/PHATE.git
 #RUN cd PHATE/Python
 #RUN python setup.py install
+
+#RUN pip install git+https://github.com/ebi-gene-expression-group/scanpy-scripts.git

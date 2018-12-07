@@ -26,7 +26,7 @@ rule alevin_10xgenomics_whitelist:
     input:
         join(INTERIM_DIR, '10xgenomics', REF, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     output:
-        join(AVN_INTERIM, 'whitelists', '{sample}', 'whitelist.txt')
+        join(AVN_INTERIM, 'whitelists', '{sample}', '10x_whitelist.txt')
     shell:
         'zcat {input} > {output}'
                      
