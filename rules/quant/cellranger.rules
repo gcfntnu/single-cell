@@ -15,11 +15,11 @@ CR_CONF = config.get('cellranger')
 REF = config['quant']['reference']
 
 def get_fastq(wildcards):
-    return join(FASTQ_DIR, config['samples'][wildcards.sample]['R1'])
+    return [join(FASTQ_DIR, fn) for fn in  config['samples'][wildcards.sample]['R1']]
 
 def get_aggr_mol(wildcards):
     samples = CR_AGGR[wildcards.group]
-    DIR = join(CR_INTERIM, ORG, REF)
+    DIR = join(CR_INTERIM, REF)
     mol_files = expand(join(DIR, '{sample}', 'outs', 'molecule_info.h5'), sample=samples)
     return mol_files
 
@@ -33,9 +33,9 @@ rule cellranger_count:
         outdir = join(CR_INTERIM, REF, '{sample}'),
         sample = '{sample}',
         transcriptome = join(EXT_DIR, REF),
-        ncells = 1000
+        ncells = 3000
     threads:
-        16
+        8
     output:
         summary = join(CR_INTERIM, REF, '{sample}', 'outs', 'web_summary.html'),
         raw_h5 = join(CR_INTERIM, REF, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),

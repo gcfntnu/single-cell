@@ -46,6 +46,5 @@ ENV PATH /opt/gffread/gffread:$PATH
 RUN git clone https://github.com/lh3/bioawk.git && \
   cd bioawk && \
   make && \
-  mv awk bioawk && \
   cp bioawk /usr/local/bin/ && \
   cd .. && rm -rf bioawk

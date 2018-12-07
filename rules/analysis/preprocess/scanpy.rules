@@ -1,0 +1,14 @@
+
+rule scanpy_filter_cells:
+    singularity:
+        'quay.io/biocontainers/scanpy-scripts:0.0.3--py37_1'
+rule scanpy_filter_genes:
+    singularity:
+        'quay.io/biocontainers/scanpy-scripts:0.0.3--py37_1'
+rule scanpy_normalize:
+    singularity:
+        'quay.io/biocontainers/scanpy-scripts:0.0.3--py37_1'
+rule scanpy_variable_genes:
+    singularity:
+        'quay.io/biocontainers/scanpy-scripts:0.0.3--py37_1'
+

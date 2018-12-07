@@ -16,9 +16,13 @@ if os.path.exists(extra_conf_fn):
         c  = yaml.load(fh) or {}
         update_config2(config, c)
 
+GC_ORG_MAP = {'homo_sapiens':  'human',
+              'mus_musculus': 'mouse',
+              'homo_sapiens__mus_musculus': ''}
+
 GENCODE_EXT = join(EXT_DIR, 'gencode')
 ORG = config.get('organism', 'homo_sapiens')
-GENCODE_ORG = {'homo_sapiens':  'human', 'mus_musculus': 'mouse'}[ORG]
+GENCODE_ORG = GC_ORG_MAP[ORG]
 DB_CONF = config.get('gencode', {})
 ASSEMBLY = DB_CONF.get('assembly', 'primary_assembly')
 GENCODE_RELEASE = DB_CONF.get('gencode_release', 27)

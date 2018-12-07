@@ -1,6 +1,5 @@
 #-*- mode:snakemake -*-
 AVN_EXT = join(EXT_DIR, 'alevin')
-ORG = config.get('organism', 'homo_sapiens')
 AVN_CONFIG = config.get('alevin', {})
 AVN_DOCKER = AVN_CONFIG.get('docker', 'docker://flatberg/alevin:dev0.12')
 
