@@ -40,4 +40,5 @@ if __name__ == '__main__':
     else:
         data = sc.read_10x_mtx(args.infile, gex_only=False)
     
+    data.var_names_make_unique()
     data.write(args.outfile)

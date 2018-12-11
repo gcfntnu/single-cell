@@ -39,10 +39,10 @@ RUN conda config --add channels conda-forge
 RUN conda install --quiet --yes scanpy bioservices pip dask dca pypairs numba zappy multicore-tsne cython tasklogger>=0.4.0 graphtools>=0.2.0 tqdm python-annoy joblib scprep pandas numpy scipy matplotlib
 RUN conda clean -tipsy
 
-RUN pip --no-cache-dir install phate fa2 bbknn magic-impute leidenalg
+RUN pip --no-cache-dir install phate fa2 bbknn magic-impute leidenalg vpolo
 
 #RUN git clone --recursive git://github.com/KrishnaswamyLab/PHATE.git
 #RUN cd PHATE/Python
 #RUN python setup.py install
 
-#RUN pip install git+https://github.com/ebi-gene-expression-group/scanpy-scripts.git
+RUN pip install git+https://github.com/flatberg/scanpy-scripts.git

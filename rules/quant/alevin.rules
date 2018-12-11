@@ -37,13 +37,14 @@ rule alevin_quasi:
         ref = join(EXT_DIR, REF, 'salmon', 'refInfo.json'),
         t2g = join(EXT_DIR, REF, 'genes', 'txp2gene.tsv')
     params:
-        args = '-l ISR --chromiumV3',
-        output = join(AVN_PROCESSED, '{sample}'),
+        args = '-l ISR --chromiumV3 --dumpCsvCounts',
+        output = join(AVN_INTERIM, '{sample}'),
         ref = join(EXT_DIR, REF, 'salmon')
     singularity:
         'docker://flatberg/alevin:dev0.12'
     output:
-        join(AVN_PROCESSED, '{sample}', 'alevin', 'quants_mat.gz')
+        quant = join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.gz'),
+        csv = join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.csv')
     shell:
         'salmon alevin '
         '{params.args} '
@@ -53,3 +54,28 @@ rule alevin_quasi:
         '-2 {input.R2} '
         '-p {threads} '
         '-o {params.output} '
+
+rule alevin_seurat:
+    input:
+        join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.csv')
+    params:
+        script = srcdir('scripts/alevin_seurat.R'),
+        input_dir = join(AVN_INTERIM, '{sample}')
+    output:
+        join(AVN_PROCESSED, 'seurat', '{sample}', '{sample}.rds')
+    singularity:
+        'docker://flatberg/seurat:dev-3.0.1'
+    shell:
+        'Rscript {params.script} --input {params.input_dir} --output {output}'
+
+rule alevin_scanpy:
+    input:
+        join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.gz')
+    params:
+        script = srcdir('scripts/alevin_scanpy.py')
+    output:
+        join(AVN_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.3.4'
+    shell:
+        'python {params.script} -i {input} -o {output} '

@@ -75,11 +75,11 @@ rule cellranger_aggr:
 
 rule cellranger_seurat:
     input:
-        expand(join(CR_INTERIM, REF, '{sample}', 'outs','filtered_feature_bc_matrix'), sample=SAMPLES)
+        join(CR_INTERIM, REF, '{sample}', 'outs','filtered_feature_bc_matrix')
     params:
         script = srcdir('scripts/cellranger_seurat.R')
     output:
-        join(CR_PROCESSED, 'seurat', '{sample}', 'sdata.rds')
+        join(CR_PROCESSED, 'seurat', '{sample}', '{sample}.rds')
     singularity:
         'docker://flatberg/seurat:dev-3.0.1'
     shell:
@@ -87,12 +87,12 @@ rule cellranger_seurat:
 
 rule cellranger_scanpy:
     input:
-        rules.cellranger_count.output.filt_h5
+        join(CR_INTERIM, REF, '{sample}', 'outs','filtered_feature_bc_matrix')
     params:
         script = srcdir('scripts/cellranger_scanpy.py'),
         genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else ''
     output:
-        join(CR_PROCESSED, 'scanpy', '{sample}', 'data.h5ad')
+        join(CR_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.3.4'
     shell:
