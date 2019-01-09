@@ -25,10 +25,10 @@ def get_aggr_mol(wildcards):
 
 rule cellranger_count:
     input:
-        fastq = get_fastq,
+        fastq = get_filtered_fastq,
         transcriptome = join(EXT_DIR, REF, 'reference.json')
     params:
-        input = FASTQ_DIR,
+        input = rules.fastp_10x_paired.params.out,
         id = '{sample}',
         outdir = join(CR_INTERIM, REF, '{sample}'),
         sample = '{sample}',

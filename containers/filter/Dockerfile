@@ -10,7 +10,7 @@ RUN apt-get update --fix-missing && \
     curl \
     ca-certificates \
     build-essential \
-    git \
+    git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
