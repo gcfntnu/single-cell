@@ -64,12 +64,16 @@ if os.path.exists(extra_conf_fn):
         # original config will override extra config on shared items
         update_config2(config, c)
 
+
 SAMPLES = config.get('samples', [])
+    
 if SAMPLES:
     SAMPLES = list(SAMPLES.keys())
 
 include:
     'rules/db.rules'
+include:
+    'rules/filter.rules'
 include:
     'rules/quant.rules'
 

@@ -46,8 +46,8 @@ quant:
 samples:
   tinygex:
     I1: tinygex_S1_L001_I1_001.fastq.gz 
-    R1: tinygex_S1_L001_R1_001.fastq.gz 
-    R2: tinygex_S1_L001_R2_001.fastq.gz 
+    R1: tinygex_S1_L001_R1_001.fastq.gz,tinygex_S1_L002_R1_001.fastq.gz
+    R2: tinygex_S1_L001_R2_001.fastq.gz,tinygex_S1_L002_R2_001.fastq.gz
 scanpy:
   genome: GRCh38_chr21
   docker: 'docker://gcfntnu/scanpy:1.3.4'

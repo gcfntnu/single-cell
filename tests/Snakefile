@@ -3,3 +3,7 @@ configfile:
 
 include:
     '../single-cell.sm'
+    
+rule test_filter:
+    input:
+        expand(rules.fastp_pe.output, sample=SAMPLES)
