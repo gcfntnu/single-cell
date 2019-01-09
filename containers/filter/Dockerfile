@@ -10,6 +10,7 @@ RUN apt-get update --fix-missing && \
     curl \
     ca-certificates \
     build-essential \
+    cmake \
     git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -39,6 +40,6 @@ RUN conda install --quiet --yes atropos fastp fastqc
 RUN conda clean -tipsy
 
 RUN git clone https://github.com/linsalrob/fastq-pair.git
-RUN cd fastq-pair && mkdir build && cd build
-RUN cmake ..
-RUN make && make install
+RUN mkdir fastq-pair/build
+RUN cd fastq-pair/build && cmake .. && make && make install
+RUN rm -rf fastq-pair
