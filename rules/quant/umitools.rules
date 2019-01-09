@@ -12,6 +12,7 @@ include:
 #config
 FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 UMI_PROCESSED = join(PROCESSED_DIR, 'umitools')
+UMI_INTERIM= join(INTERIM_DIR, 'umitools')
 REF = config['quant']['reference']
 
 def get_fastq_R1(wildcards):
@@ -24,13 +25,14 @@ rule umitools_whitelist:
     input:
         R1 = get_fastq_R1
     params:
-        '--bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN --set-cell-number=1000'
+        '--bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN --plot-prefix test.'
     output:
         'data/tmp/umitools/{sample}/whitelist.txt'
     singularity:
         'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
     shell:
         'umi_tools whitelist '
+        '{params} '
         '--stdin {input.R1} '
         '--log2stderr '
         '> {output}'
@@ -54,23 +56,95 @@ rule umitools_extract:
         '--stdout {output.R1} '
         '--read2-out {output.R2} '
         '--whitelist {input.whitelist} '
-        '{params}'
+        '{params} '
 
 rule umitools_align_star:
     input:
-        rules.umitools_extract.output
+        R2 = rules.umitools_extract.output.R2,
+        ref = join(EXT_DIR, REF, 'star', 'SA')
     output:
-        bam = 'Aligned.sortedByCoord.out.bam'
+        bam = join(UMI_INTERIM, '{sample}', '{sample}.Aligned.sortedByCoord.out.bam')
     singularity:
-        'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
+        'docker://flatberg/star:2.6.1d'
+    params:
+        ref = join(EXT_DIR, REF, 'star'),
+        out_prefix = join(UMI_INTERIM, '{sample}', '{sample}.'),
+        args = '--readFilesCommand zcat --outFilterMultimapNmax 1 --outSAMtype BAM SortedByCoordinate '
     threads:
         16
     shell:
         'STAR '
-
+        '--readFilesIn {input.R2} '
+        '--genomeDir {params.ref} '
+        '--runThreadN {threads} '
+        '--outFileNamePrefix {params.out_prefix} ' 
+        '{params.args}'
 
 rule umitools_assign_genes:
+    input:
+        bam = join(UMI_INTERIM, '{sample}', '{sample}.Aligned.sortedByCoord.out.bam'),
+        gtf = join(EXT_DIR, REF, 'genes', 'genes.gtf')
+    singularity:
+        'docker://quay.io/biocontainers/subread:1.6.3--ha92aebf_0'
+    output:
+        out = 'data/tmp/umitools/{sample}/{sample}.gene_assignment.txt',
+        bam = 'data/tmp/umitools/{sample}/{sample}.Aligned.sortedByCoord.out.bam.featureCounts.bam'
+    threads:
+        16
+    shell:
+        'featureCounts '
+        '-a {input.gtf} ' 
+        '-o {output} '
+        '-R BAM '
+        '-T {threads} '
+        '{input.bam} '
 
+rule umitools_sort_bam:
+    input:
+        'data/tmp/umitools/{sample}/{sample}.Aligned.sortedByCoord.out.bam.featureCounts.bam'
+    output:
+        'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam'
+    singularity:
+        'docker://quay.io/biocontainers/samtools:1.9--h46bd0b3_0'
+    shell:
+        'samtools sort {input} -o {output}'
 
-rule umitools_quant:
+rule umitools_index_bam:
+    input:
+        'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam'
+    output:
+        'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam.bai'
+    singularity:
+        'docker://quay.io/biocontainers/samtools:1.9--h46bd0b3_0'
+    shell:
+        'samtools index {input}'
     
+rule umitools_quant:
+    input:
+       bam = 'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam',
+       index = 'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam.bai'
+    output:
+        'data/tmp/umitools/{sample}/counts.tsv.gz'
+    params:
+        '--per-gene --gene-tag=XT --assigned-status-tag=XS --per-cell '
+    singularity:
+        'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
+    shell:
+        'umi_tools count '
+        '{params} '
+        '-I {input.bam} '
+        '-S {output} '
+
+rule umitools_scanpy:
+    input:
+      rules.umitools_quant.output
+    params:
+        script = srcdir('scripts/umitools_scanpy.py')
+    output:
+        join(UMI_PROCESSED, '{sample}', '{sample}.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.3.4'
+    shell:
+        'python {params.script} -i {input} -o {output} '
+
+rule umitools_seurat:
