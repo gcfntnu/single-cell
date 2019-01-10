@@ -6,4 +6,9 @@ include:
     
 rule test_filter:
     input:
-        expand(rules.fastp_pe.output, sample=SAMPLES)
+        expand(rules.fastp_10x.output, sample=SAMPLES)
+
+rule test_cellranger:
+    input:
+        expand(join('data', 'processed', '{quant}', 'scanpy', '{sample}', '{sample}.h5ad'), sample=SAMPLES, quant=['cellranger', 'alevin', 'umitools']),
+        expand(join('data', 'processed', '{quant}', 'seurat', '{sample}', '{sample}.rds'), sample=SAMPLES, quant=['cellranger', 'alevin', 'umitools'])

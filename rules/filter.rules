@@ -34,10 +34,15 @@ def _filter_get_raw_R2(wildcards):
                 fastq_files.extend(values['R1'].split(','))
     return [os.path.join(FASTQ_DIR, i) for i in fastq_files]
     
-def get_filtered_fastq(wildcards):
-    return {'R1': join(FILTER_INTERIM, 'fastp_10x', '{sample}_R1.fastq.paired'),
-            'R2': join(FILTER_INTERIM, 'fastp_10x', '{sample}_R2.trimmed.fastq.paired')}
-
-
 include:
     'filter/fastp.rules'
+    
+def get_filtered_fastq_R2(wildcards):
+    if config['filter']['skip']:
+        return _filter_get_raw_R2(wildcards)
+    return join(FILTER_INTERIM, 'fastp_10x', '{sample}_S1_L000_R2_001.fastq.gz')
+
+def get_filtered_fastq_R1(wildcards):
+    if config['filter']['skip']:
+        return _filter_get_raw_R1(wildcards)
+    return join(FILTER_INTERIM, 'fastp_10x', '{sample}_S1_L000_R1_001.fastq.gz')

@@ -5,7 +5,7 @@ rule fastp_interleave_fastq:
         R1 = _filter_get_raw_R1,
         R2 = _filter_get_raw_R2,
     output:
-        pipe(join(INTERIM_DIR, 'interleaved_fastq', '{sample}.fastq'))
+        pipe(join(FILTER_INTERIM, 'interleaved_fastq', '{sample}.fastq'))
     params:
         script = srcdir('scripts/interleave_fastq.sh')
     shell:
@@ -28,7 +28,7 @@ rule fastp_se:
 
 rule fastp_pe:
     input:
-        join(INTERIM_DIR, 'interleaved_fastq', '{sample}.fastq')
+        join(FILTER_INTERIM, 'interleaved_fastq', '{sample}.fastq')
     output:
         R1 = join(FILTER_INTERIM, 'fastp_pe', '{sample}_R1.fastq.gz'),
         R2 = join(FILTER_INTERIM, 'fastp_pe', '{sample}_R2.fastq.gz')
@@ -48,7 +48,7 @@ rule fastp_10x_R1:
     input:
         _filter_get_raw_R1
     output:
-        join(FILTER_INTERIM, 'fastp_10x', '{sample}_R1.fastq')
+        temp(join(FILTER_INTERIM, 'fastp_10x', '{sample}_R1.fastq'))
     shell:
         ' zcat {input} > {output}'
         
@@ -56,7 +56,7 @@ rule fastp_10x_R2:
     input:
         _filter_get_raw_R2
     output:
-        join(FILTER_INTERIM, 'fastp', '{sample}_R2.trimmed.fastq')
+        temp(join(FILTER_INTERIM, 'fastp_10x', '{sample}_R2.trimmed.fastq'))
     singularity:
         config['filter']['docker']
     params:
@@ -65,19 +65,33 @@ rule fastp_10x_R2:
         json = 'logs/{sample}/fastp.json',
         html = 'logs/{sample}/fastp.html' 
     shell:
-        ' zcat {input} | fastp --stdin -o {output} -j {logs.json} -h {log.html} {params}'
+        'zcat {input} | fastp --stdin -o {output} -j {log.json} -h {log.html} {params}'
 
-rule fastp_10x_paired:
+rule fastp_10x_repair:
     input:
-        R1 = join(FILTER_INTERIM, 'fastp_10x', '{sample}_R1.fastq')
+        R1 = join(FILTER_INTERIM, 'fastp_10x', '{sample}_R1.fastq'),
         R2 = join(FILTER_INTERIM, 'fastp_10x', '{sample}_R2.trimmed.fastq')
     params:
         out = join(FILTER_INTERIM, 'fastp_10x')
     singularity:
         config['filter']['docker']    
     output:
-        R1 = join(FILTER_INTERIM, 'fastp_10x', '{sample}_R1.fastq.paired')
-        R2 = join(FILTER_INTERIM, 'fastp_10x', '{sample}_R2.trimmed.fastq.paired')
+        R1 = temp(join(FILTER_INTERIM, 'fastp_10x', '{sample}_R1.fastq.paired.fq')),
+        R2 = temp(join(FILTER_INTERIM, 'fastp_10x', '{sample}_R2.trimmed.fastq.paired.fq'))
     shell:
         'fastq_pair {input} '
 
+rule fastp_10x:
+    input:
+        R1 = join(FILTER_INTERIM, 'fastp_10x', '{sample}_R1.fastq.paired.fq'),
+        R2 = join(FILTER_INTERIM, 'fastp_10x', '{sample}_R2.trimmed.fastq.paired.fq')
+    params:
+        out = join(FILTER_INTERIM, 'fastp_10x')
+    output:
+        R1 = join(FILTER_INTERIM, 'fastp_10x', '{sample}_S1_L000_R1_001.fastq.gz'),
+        R2 = join(FILTER_INTERIM, 'fastp_10x', '{sample}_S1_L000_R2_001.fastq.gz')   
+    shell:
+        """
+        gzip {input.R1} -c > {output.R1}
+        gzip {input.R2} -c > {output.R2}
+        """

@@ -14,8 +14,6 @@ CR_INTERIM = join(INTERIM_DIR, 'cellranger')
 CR_CONF = config.get('cellranger')
 REF = config['quant']['reference']
 
-def get_fastq(wildcards):
-    return [join(FASTQ_DIR, fn) for fn in  config['samples'][wildcards.sample]['R1']]
 
 def get_aggr_mol(wildcards):
     samples = CR_AGGR[wildcards.group]
@@ -25,10 +23,11 @@ def get_aggr_mol(wildcards):
 
 rule cellranger_count:
     input:
-        fastq = get_filtered_fastq,
+        R1 = get_filtered_fastq_R1,
+        R2 = get_filtered_fastq_R2,
         transcriptome = join(EXT_DIR, REF, 'reference.json')
     params:
-        input = rules.fastp_10x_paired.params.out,
+        input = rules.fastp_10x.params.out if not config['filter']['skip'] else FASTQ_DIR,
         id = '{sample}',
         outdir = join(CR_INTERIM, REF, '{sample}'),
         sample = '{sample}',

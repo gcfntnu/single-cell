@@ -7,20 +7,10 @@ if os.path.exists(extra_conf_fn):
         update_config2(config, c)
 
 #config
-FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 AVN_INTERIM = join(INTERIM_DIR, 'alevin')
 AVN_PROCESSED = join(PROCESSED_DIR, 'alevin')
 REF = config['quant']['reference']
 
-def get_fastq_R1(wildcards):
-    R1 = config['samples'][wildcards.sample]['R1'].split(',')
-    R1 = [join(FASTQ_DIR, fn) for fn in R1]
-    return ' '.join(R1)
-
-def get_fastq_R2(wildcards):
-    R2 = config['samples'][wildcards.sample]['R2'].split(',')
-    R2 = [join(FASTQ_DIR, fn) for fn in R2]
-    return ' '.join(R2)
 
 rule alevin_10xgenomics_whitelist:
     input:
@@ -32,14 +22,16 @@ rule alevin_10xgenomics_whitelist:
                      
 rule alevin_quasi:
     input:
-        R1 = get_fastq_R1,
-        R2 = get_fastq_R2,
+        R1 = get_filtered_fastq_R1,
+        R2 = get_filtered_fastq_R2,
         ref = join(EXT_DIR, REF, 'salmon', 'refInfo.json'),
         t2g = join(EXT_DIR, REF, 'genes', 'txp2gene.tsv')
     params:
         args = '-l ISR --chromiumV3 --dumpCsvCounts',
         output = join(AVN_INTERIM, '{sample}'),
         ref = join(EXT_DIR, REF, 'salmon')
+    threads:
+        16
     singularity:
         'docker://flatberg/alevin:dev0.12'
     output:

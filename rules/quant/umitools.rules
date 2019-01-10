@@ -6,28 +6,25 @@ if os.path.exists(extra_conf_fn):
         c  = yaml.load(fh) or {}
         update_config2(config, c)
 
+# force concat of fastq files
+config['filter']['skip'] = False
+
 include:
     'cellranger.rules'
     
 #config
-FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 UMI_PROCESSED = join(PROCESSED_DIR, 'umitools')
 UMI_INTERIM= join(INTERIM_DIR, 'umitools')
 REF = config['quant']['reference']
 
-def get_fastq_R1(wildcards):
-    return join(FASTQ_DIR, config['samples'][wildcards.sample]['R1'])
-
-def get_fastq_R2(wildcards):
-    return join(FASTQ_DIR, config['samples'][wildcards.sample]['R1'])
 
 rule umitools_whitelist:
     input:
-        R1 = get_fastq_R1
+        R1 = get_filtered_fastq_R1
     params:
-        '--bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN --plot-prefix test.'
+        '--bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN --plot-prefix data/tmp/umitools/{sample}/{sample}'
     output:
-        'data/tmp/umitools/{sample}/whitelist.txt'
+        join(UMI_INTERIM, '{sample}','whitelist.txt')
     singularity:
         'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
     shell:
@@ -39,14 +36,14 @@ rule umitools_whitelist:
 
 rule umitools_extract:
     input:
-        R1 = get_fastq_R1,
-        R2 = get_fastq_R2,
+        R1 = get_filtered_fastq_R1,
+        R2 = get_filtered_fastq_R2,
         whitelist = rules.umitools_whitelist.output
     params:
         '--bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN --filter-cell-barcode '
     output:
-        R1 = 'data/tmp/umitools/{sample}/{sample}_R1.fastq.gz',
-        R2 = 'data/tmp/umitools/{sample}/{sample}_R2.fastq.gz'
+        R1 = join(UMI_INTERIM, '{sample}', '{sample}_R1.fastq.gz'),
+        R2 = join(UMI_INTERIM, '{sample}', '{sample}_R2.fastq.gz')
     singularity:
         'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
     shell:
@@ -87,23 +84,23 @@ rule umitools_assign_genes:
     singularity:
         'docker://quay.io/biocontainers/subread:1.6.3--ha92aebf_0'
     output:
-        out = 'data/tmp/umitools/{sample}/{sample}.gene_assignment.txt',
-        bam = 'data/tmp/umitools/{sample}/{sample}.Aligned.sortedByCoord.out.bam.featureCounts.bam'
+        out = join(UMI_INTERIM, '{sample}', '{sample}.gene_assignment.txt'),
+        bam = join(UMI_INTERIM, '{sample}', '{sample}.Aligned.sortedByCoord.out.bam.featureCounts.bam')
     threads:
         16
     shell:
         'featureCounts '
         '-a {input.gtf} ' 
-        '-o {output} '
+        '-o {output.out} '
         '-R BAM '
         '-T {threads} '
         '{input.bam} '
 
 rule umitools_sort_bam:
     input:
-        'data/tmp/umitools/{sample}/{sample}.Aligned.sortedByCoord.out.bam.featureCounts.bam'
+        join(UMI_INTERIM, '{sample}', '{sample}.Aligned.sortedByCoord.out.bam.featureCounts.bam')
     output:
-        'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam'
+        join(UMI_INTERIM, '{sample}', '{sample}.Assigned.sorted.bam')
     singularity:
         'docker://quay.io/biocontainers/samtools:1.9--h46bd0b3_0'
     shell:
@@ -111,9 +108,9 @@ rule umitools_sort_bam:
 
 rule umitools_index_bam:
     input:
-        'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam'
+        join(UMI_INTERIM, '{sample}', '{sample}.Assigned.sorted.bam')
     output:
-        'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam.bai'
+        join(UMI_INTERIM, '{sample}', '{sample}.Assigned.sorted.bam.bai')
     singularity:
         'docker://quay.io/biocontainers/samtools:1.9--h46bd0b3_0'
     shell:
@@ -121,10 +118,10 @@ rule umitools_index_bam:
     
 rule umitools_quant:
     input:
-       bam = 'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam',
-       index = 'data/tmp/umitools/{sample}/{sample}.Assigned.sorted.bam.bai'
+       bam = join(UMI_INTERIM, '{sample}', '{sample}.Assigned.sorted.bam'),
+       index = join(UMI_INTERIM, '{sample}', '{sample}.Assigned.sorted.bam.bai')
     output:
-        'data/tmp/umitools/{sample}/counts.tsv.gz'
+        join(UMI_INTERIM,'{sample}' ,'counts.tsv.gz')
     params:
         '--per-gene --gene-tag=XT --assigned-status-tag=XS --per-cell '
     singularity:
@@ -141,10 +138,20 @@ rule umitools_scanpy:
     params:
         script = srcdir('scripts/umitools_scanpy.py')
     output:
-        join(UMI_PROCESSED, '{sample}', '{sample}.h5ad')
+        join(UMI_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.3.4'
     shell:
         'python {params.script} -i {input} -o {output} '
 
 rule umitools_seurat:
+    input:
+      rules.umitools_quant.output
+    params:
+        script = srcdir('scripts/umitools_seurat.R')
+    output:
+        join(UMI_PROCESSED, 'seurat', '{sample}', '{sample}.rds')
+    singularity:
+        'docker://flatberg/seurat:dev-3.0.1'
+    shell:
+        'Rscript {params.script} -i {input} -o {output} '

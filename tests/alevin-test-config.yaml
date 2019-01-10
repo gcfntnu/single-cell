@@ -31,7 +31,7 @@ ensembl:
 ext_dir: data/ext
 fastq_dir: data/raw/fastq/p1/s1/
 gencode:
-  add_ercc: true
+  add_ercc: false
   assembly: primary_assembly
   gencode_release: '28'
   protocol: ftp
@@ -39,7 +39,7 @@ gencode:
 interim_dir: data/tmp
 organism: homo_sapiens
 processed_dir: data/processed
-project: GCF-2018-002
+project: GCF-2018-540
 quant:
   method: cellranger
   reference: 10xgenomics
