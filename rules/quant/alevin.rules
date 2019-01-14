@@ -14,7 +14,7 @@ REF = config['quant']['reference']
 
 rule alevin_10xgenomics_whitelist:
     input:
-        join(INTERIM_DIR, '10xgenomics', REF, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
+        join(INTERIM_DIR, 'cellranger', REF, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     output:
         join(AVN_INTERIM, 'whitelists', '{sample}', '10x_whitelist.txt')
     shell:
@@ -35,8 +35,8 @@ rule alevin_quasi:
     singularity:
         'docker://flatberg/alevin:dev0.12'
     output:
-        quant = join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.gz'),
-        csv = join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.csv')
+        quant = join(AVN_INTERIM, REF, '{sample}', 'alevin', 'quants_mat.gz'),
+        csv = join(AVN_INTERIM, REF, '{sample}', 'alevin', 'quants_mat.csv')
     shell:
         'salmon alevin '
         '{params.args} '
@@ -49,10 +49,10 @@ rule alevin_quasi:
 
 rule alevin_seurat:
     input:
-        join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.csv')
+        join(AVN_INTERIM, REF, '{sample}', 'alevin', 'quants_mat.csv')
     params:
         script = srcdir('scripts/alevin_seurat.R'),
-        input_dir = join(AVN_INTERIM, '{sample}')
+        input_dir = join(AVN_INTERIM, REF, '{sample}')
     output:
         join(AVN_PROCESSED, 'seurat', '{sample}', '{sample}.rds')
     singularity:
@@ -62,12 +62,12 @@ rule alevin_seurat:
 
 rule alevin_scanpy:
     input:
-        join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.gz')
+        join(AVN_INTERIM, REF, '{sample}', 'alevin', 'quants_mat.gz')
     params:
         script = srcdir('scripts/alevin_scanpy.py')
     output:
         join(AVN_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.3.4'
+        'docker://gcfntnu/scanpy:1.3.7'
     shell:
         'python {params.script} -i {input} -o {output} '

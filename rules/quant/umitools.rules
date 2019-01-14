@@ -140,7 +140,7 @@ rule umitools_scanpy:
     output:
         join(UMI_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.3.4'
+        'docker://gcfntnu/scanpy:1.3.7'
     shell:
         'python {params.script} -i {input} -o {output} '
 

@@ -34,7 +34,7 @@ rule cellranger_count:
         transcriptome = join(EXT_DIR, REF),
         ncells = 3000
     threads:
-        8
+        12
     output:
         summary = join(CR_INTERIM, REF, '{sample}', 'outs', 'web_summary.html'),
         raw_h5 = join(CR_INTERIM, REF, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
@@ -45,15 +45,16 @@ rule cellranger_count:
     singularity:
         CR_CONF['docker']
     shell:
+        'rm -rf {params.outdir} && '
         'cellranger count '
         '--fastqs {params.input} '
         '--id {params.id} '
         '--sample {params.sample} '
         '--transcriptome {params.transcriptome} '
         '--expect-cells {params.ncells} '
-        '--localcores {threads} '
-        '&& mv {params.id}/* {params.outdir}/ '
-        '&& rmdir {params.id}'
+        '--localcores {threads} && '
+        'mv -f {params.id}/* {params.outdir}/ && '
+        'rmdir {params.id}'
 
 rule cellranger_aggr_csv:
     input:
@@ -93,6 +94,6 @@ rule cellranger_scanpy:
     output:
         join(CR_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.3.4'
+        'docker://gcfntnu/scanpy:1.3.7'
     shell:
         'python {params.script} -i {input} -o {output} {params.genome} '
