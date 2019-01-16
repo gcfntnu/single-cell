@@ -38,7 +38,7 @@ if __name__ == '__main__':
             raise ValueError('loading a .h5 file in scanpy requires the `genome` parameter')
         data = sc.read_10x_h5(args.infile, genome=args.genome)
     else:
-        data = sc.read_10x_mtx(args.infile, gex_only=False)
+        data = sc.read_10x_mtx(args.infile, gex_only=False, var_names='gene_ids')
     
     data.var_names_make_unique()
     data.write(args.outfile)

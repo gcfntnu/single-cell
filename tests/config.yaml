@@ -1,3 +1,5 @@
+filter:
+  skip: false
 cellranger:
   docker: 'docker://gcfntnu/cellranger:3.0.0'
   gene_biotype:

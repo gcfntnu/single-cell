@@ -3,6 +3,7 @@ FROM ubuntu:18.04
 ENV CELLRANGER_VER 3.0.0
 ENV BCL2FASTQ_VER 2-20-0
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ENV PATH /opt/cellranger-$CELLRANGER_VER:$PATH
 
 RUN apt-get update --fix-missing && \
     apt-get install -y \
@@ -26,8 +27,7 @@ COPY files/cellranger-$CELLRANGER_VER.tar.gz /opt/cellranger-$CELLRANGER_VER.tar
 RUN \
   cd /opt && \
   tar -xzvf cellranger-$CELLRANGER_VER.tar.gz && \
-  export PATH=/opt/cellranger-$CELLRANGER_VER:$PATH && \
-  ln -s /opt/cellranger-$CELLRANGER_VER/cellranger /usr/bin/cellranger && \
+  #ln -s /opt/cellranger-$CELLRANGER_VER/cellranger /usr/bin/cellranger && \
   rm -rf /opt/cellranger-$CELLRANGER_VER.tar.gz
 
 

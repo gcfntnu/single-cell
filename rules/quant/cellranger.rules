@@ -9,8 +9,8 @@ if os.path.exists(extra_conf_fn):
 #config
 ORG = config.get('organism', 'homo_sapiens')
 FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
-CR_PROCESSED = join(PROCESSED_DIR, 'cellranger')
-CR_INTERIM = join(INTERIM_DIR, 'cellranger')
+CR_PROCESSED = join(QUANT_PROCESSED, 'cellranger')
+CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
 CR_CONF = config.get('cellranger')
 REF = config['quant']['reference']
 
@@ -29,19 +29,19 @@ rule cellranger_count:
     params:
         input = rules.fastp_10x.params.out if not config['filter']['skip'] else FASTQ_DIR,
         id = '{sample}',
-        outdir = join(CR_INTERIM, REF, '{sample}'),
+        outdir = join(CR_INTERIM, '{sample}'),
         sample = '{sample}',
         transcriptome = join(EXT_DIR, REF),
         ncells = 3000
     threads:
         12
     output:
-        summary = join(CR_INTERIM, REF, '{sample}', 'outs', 'web_summary.html'),
-        raw_h5 = join(CR_INTERIM, REF, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
-        filt_h5 = join(CR_INTERIM, REF, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
-        mol_h5 = join(CR_INTERIM, REF, '{sample}', 'outs', 'molecule_info.h5'),
-        raw_mtx = directory(join(CR_INTERIM, REF, '{sample}', 'outs', 'raw_feature_bc_matrix')),
-        filt_mtx = directory(join(CR_INTERIM, REF, '{sample}', 'outs', 'filtered_feature_bc_matrix'))
+        summary = join(CR_INTERIM, '{sample}', 'outs', 'web_summary.html'),
+        raw_h5 = join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
+        filt_h5 = join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
+        mol_h5 = join(CR_INTERIM, '{sample}', 'outs', 'molecule_info.h5'),
+        raw_mtx = directory(join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix')),
+        filt_mtx = directory(join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix'))
     singularity:
         CR_CONF['docker']
     shell:
@@ -52,9 +52,11 @@ rule cellranger_count:
         '--sample {params.sample} '
         '--transcriptome {params.transcriptome} '
         '--expect-cells {params.ncells} '
+        '--nosecondary '
+        '--disable-ui '
+        '--nopreflight '
         '--localcores {threads} && '
-        'mv -f {params.id}/* {params.outdir}/ && '
-        'rmdir {params.id}'
+        'mv -f {params.id} {params.outdir} '
 
 rule cellranger_aggr_csv:
     input:
@@ -75,7 +77,7 @@ rule cellranger_aggr:
 
 rule cellranger_seurat:
     input:
-        join(CR_INTERIM, REF, '{sample}', 'outs','filtered_feature_bc_matrix')
+        join(CR_INTERIM, '{sample}', 'outs','filtered_feature_bc_matrix')
     params:
         script = srcdir('scripts/cellranger_seurat.R')
     output:
@@ -87,7 +89,7 @@ rule cellranger_seurat:
 
 rule cellranger_scanpy:
     input:
-        join(CR_INTERIM, REF, '{sample}', 'outs','filtered_feature_bc_matrix')
+        join(CR_INTERIM, '{sample}', 'outs','filtered_feature_bc_matrix')
     params:
         script = srcdir('scripts/cellranger_scanpy.py'),
         genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else ''

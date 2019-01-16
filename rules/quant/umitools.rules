@@ -7,14 +7,14 @@ if os.path.exists(extra_conf_fn):
         update_config2(config, c)
 
 # force concat of fastq files
-config['filter']['skip'] = False
+#config['filter']['skip'] = False
 
 include:
     'cellranger.rules'
     
 #config
-UMI_PROCESSED = join(PROCESSED_DIR, 'umitools')
-UMI_INTERIM= join(INTERIM_DIR, 'umitools')
+UMI_PROCESSED = join(QUANT_PROCESSED, 'umitools')
+UMI_INTERIM= join(QUANT_INTERIM, 'umitools')
 REF = config['quant']['reference']
 
 
