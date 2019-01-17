@@ -21,7 +21,9 @@ GENOME = {'homo_sapiens': 'GRCh38',
 parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
 parser.add_argument('-i', '--infile', help='input filename')
-parser.add_argument('-o', '--outfile', help="output filefilename",)
+parser.add_argument('-o', '--outfile', help="output filename",)
+parser.add_argument('-f', '--format', choices=['anndata', 'loom', 'csvs'], default='anndata', help="output file format")
+parser.add_argument('--sample-sheet', help="samplesheet filename")
 parser.add_argument('--genome', help="Reference genome", default=None)
 
 
@@ -39,6 +41,13 @@ if __name__ == '__main__':
         data = sc.read_10x_h5(args.infile, genome=args.genome)
     else:
         data = sc.read_10x_mtx(args.infile, gex_only=False, var_names='gene_ids')
-    
     data.var_names_make_unique()
-    data.write(args.outfile)
+    
+    if args.format == 'anndata':
+        data.write(args.outfile)
+    elif args.format == 'loom':
+        data.write_loom(args.outfile)
+    elif args.format == 'csvs':
+        data.write_csvs(args.outpfile)
+    else:
+        raise ValueError

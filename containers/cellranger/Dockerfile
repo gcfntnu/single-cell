@@ -27,7 +27,6 @@ COPY files/cellranger-$CELLRANGER_VER.tar.gz /opt/cellranger-$CELLRANGER_VER.tar
 RUN \
   cd /opt && \
   tar -xzvf cellranger-$CELLRANGER_VER.tar.gz && \
-  #ln -s /opt/cellranger-$CELLRANGER_VER/cellranger /usr/bin/cellranger && \
   rm -rf /opt/cellranger-$CELLRANGER_VER.tar.gz
 
 

@@ -8,13 +8,14 @@ import os
 import argparse
 
 import numpy as np
-from anndata import AnnData
-from vpolo.alevin import parser as alevin_parser
+#from anndata import AnnData
+#from vpolo.alevin import parser as alevin_parser
 
 parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument('-i', '--infile', help='input filename')
-parser.add_argument('-o', '--outfile', help="output filefilename")
-parser.add_argument('--sample-sheet', help="output filefilename")
+parser.add_argument('-o', '--outfile', help="output filename")
+parser.add_argument('-f', '--format', choices=['anndata', 'loom', 'csvs'], default='anndata', help="output file format")
+parser.add_argument('--sample-sheet', help="samplesheet filename")
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -35,4 +36,12 @@ if __name__ == '__main__':
     data = AnnData(X, row, col, dtype=np.float32)
     data.var_names_make_unique()
 
-    data.write(args.outfile)
+    if args.format == 'anndata':
+        data.write(args.outfile)
+    elif args.format == 'loom':
+        data.write_loom(args.outfile)
+    elif args.format == 'csvs':
+        data.write_csvs(args.outpfile)
+    else:
+        raise ValueError
+        
