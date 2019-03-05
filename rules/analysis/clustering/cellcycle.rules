@@ -1,0 +1,18 @@
+rule seurat_cellcycle:
+    input:
+        seurat = 'data/processed/singlecell/analysis/preprocess/{sample}/{sample}_seurat.rds',
+        markers = 'data/ext/regev_lab_cell_cycle_genes.txt'
+    output:
+        'data/processed/singlecell/analysis/clustering/{sample}/{sample}_seurat.rds'
+    params:
+        script = srcdir('scripts/seurat_cellcycle.R'),
+        args = '--write-scores -v'
+    singularity:
+        ''
+    shell:
+        'Rscript {params.script} '
+        '-i {input.seurat} '
+        '-m {input.markers} '
+        '-o {output} '
+        '{params.args} '
+        

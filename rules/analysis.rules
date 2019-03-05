@@ -1,0 +1,14 @@
+#-*- mode:snakemake -*-
+from os.path import join
+
+extra_conf_fn = srcdir('analysis.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config2(config, c)
+
+ANALYSIS_INTERIM = join(INTERIM_DIR, 'singlecell', 'analysis')
+ANALYSIS_PROCESSED = join(PROCESSED_DIR, 'singlecell', 'analysis')
+
+include:
+    'analysis/preprocess/'
