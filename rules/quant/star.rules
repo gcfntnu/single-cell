@@ -14,6 +14,12 @@ STAR_INTERIM = join(QUANT_INTERIM, 'star')
 STAR_CONF = config.get('star')
 REF = config['star']['reference']
 
+def input_string_R1(wildcards):
+    return ','.join(get_filtered_fastq_R1(wildcards))
+
+
+def input_string_R2(wildcards):
+    return ','.join(get_filtered_fastq_R2(wildcards))
 
 rule starsolo:
     input:
@@ -22,7 +28,10 @@ rule starsolo:
         transcriptome = join(ENSEMBL_EXT,'star','SA'),
         whitelist = rules.txgenomics_whitelist.output
     params:
-        outdir = join(STAR_INTERIM, '{sample}', 'outs')
+        outdir = join(STAR_INTERIM, '{sample}', 'outs'),
+        transcriptome_dir = join(ENSEMBL_EXT,'star'),
+        R1 = input_string_R1,
+        R2 = input_string_R2
     threads:
         12
     output:
@@ -35,9 +44,9 @@ rule starsolo:
     shell:
         'STAR --soloType Droplet '
         '--soloCBwhitelist {input.whitelist} '
-        '--readFilesIn {input.R2} {input.R1} '
+        '--readFilesIn {params.R2} {params.R1} '
         '--readFilesCommand zcat '
-        '--genomeDir {input.transcriptome} '
+        '--genomeDir {params.transcriptome_dir} '
         '--outFileNamePrefix {params.outdir} '
         '--runThreadN 12 '
         '--soloCBlen 16 '
