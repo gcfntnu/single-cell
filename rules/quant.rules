@@ -15,3 +15,5 @@ include:
     'quant/alevin.rules'
 include:
     'quant/umitools.rules'
+include:
+    'quant/star.rules'

@@ -148,10 +148,10 @@ rule ensembl_db_downloads:
         noncoding = join(ENSEMBL_EXT, 'fasta', 'ncdna.fa')
     shell:
         """
-        ln -s {input.genome} {output.genome}
-        ln -s {input.cdna} {output.cdna}
-        ln -s {input.gtf} {output.gtf}
-        ln -s {input.noncoding} {output.noncoding}
+        ln -sr {input.genome} {output.genome}
+        ln -sr {input.cdna} {output.cdna}
+        ln -sr {input.gtf} {output.gtf}
+        ln -sr {input.noncoding} {output.noncoding}
         """
 
 rule ensembl_index_genome:
@@ -188,7 +188,7 @@ rule ensembl_star_genome_index:
     log:
         join(ENSEMBL_EXT, 'logs', 'STAR.index.log')
     singularity:
-        'docker://gcfntnu/ensembl:0.1' 
+        'docker://gcfntnu/star:2.7.0d' 
     shell:
         'STAR '
         '--runThreadN {threads} '

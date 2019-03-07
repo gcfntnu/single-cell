@@ -16,9 +16,10 @@ REF = config['quant']['reference']
 
 
 def get_aggr_mol(wildcards):
-    samples = CR_AGGR[wildcards.group]
-    DIR = join(CR_INTERIM, REF)
-    mol_files = expand(join(DIR, '{sample}', 'outs', 'molecule_info.h5'), sample=samples)
+    #samples = CR_AGGR[wildcards.group]
+    #quick fix - NOT OK
+    samples = expand('{g}_{s}',g=wildcards.group,s=['A','B'])
+    mol_files = expand(join(CR_INTERIM, '{sample}', 'outs', 'molecule_info.h5'), sample=samples)
     return mol_files
 
 rule cellranger_count:
@@ -29,7 +30,7 @@ rule cellranger_count:
     params:
         input = rules.fastp_10x.params.out if not config['filter']['skip'] else FASTQ_DIR,
         id = '{sample}',
-        outdir = join(CR_INTERIM, '{sample}'),
+        outdir = CR_INTERIM,
         sample = '{sample}',
         transcriptome = join(EXT_DIR, REF),
         ncells = 3000
@@ -56,24 +57,46 @@ rule cellranger_count:
         '--disable-ui '
         '--nopreflight '
         '--localcores {threads} && '
-        'mv -f {params.id} {params.outdir} '
+        'cp -r {params.id} {params.outdir} && '
+        'rm -rf {params.id} '
 
 rule cellranger_aggr_csv:
-    input:
+    input: 
         get_aggr_mol
     output:
         join(CR_INTERIM, '{group}_aggr.csv')
-    shell:
-        ''
+    run:
+        with open(output[0],'w') as aggr:
+            aggr.write("library_id,molecule_h5\n")
+            for sample in input:
+                aggr.write(','.join([sample.split('/')[-3],'{}\n'.format(sample)])) 
         
 rule cellranger_aggr:
     input:
+        #csv =join(CR_INTERIM, '{group}_aggr.csv') 
         csv = rules.cellranger_aggr_csv.output
+    output:
+        summary = join(CR_INTERIM, '{group}', 'outs', 'web_summary.html'),
+        raw_h5 = join(CR_INTERIM, '{group}', 'outs', 'raw_feature_bc_matrix.h5'),
+        filt_h5 = join(CR_INTERIM, '{group}', 'outs', 'filtered_feature_bc_matrix.h5'),
+        raw_mtx = directory(join(CR_INTERIM, '{group}', 'outs', 'raw_feature_bc_matrix')),
+        filt_mtx = directory(join(CR_INTERIM, '{group}', 'outs', 'filtered_feature_bc_matrix'))
+    params:
+        outdir = CR_INTERIM,
+        id = '{group}'
+    threads:
+        12
+    singularity:
+        CR_CONF['docker']
     shell:
         'cellranger aggr '
         '--csv {input.csv} '
-        '--id {group} '
+        '--id {params.id} '
         '--normalize=mapped '
+        '--disable-ui '
+        '--localcores={threads} && '
+        'cp -r {params.id} {params.outdir} && '
+        'rm -rf {params.id} '
 
 rule cellranger_seurat:
     input:

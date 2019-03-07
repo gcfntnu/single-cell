@@ -1,0 +1,45 @@
+#-*- mode:snakemake -*-
+
+extra_conf_fn = srcdir('star.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config2(config, c)
+
+#config
+ORG = config.get('organism', 'homo_sapiens')
+FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
+STAR_PROCESSED = join(QUANT_PROCESSED, 'star')
+STAR_INTERIM = join(QUANT_INTERIM, 'star')
+STAR_CONF = config.get('star')
+REF = config['star']['reference']
+
+
+rule starsolo:
+    input:
+        R1 = get_filtered_fastq_R1,
+        R2 = get_filtered_fastq_R2,
+        transcriptome = join(ENSEMBL_EXT,'star','SA'),
+        whitelist = rules.txgenomics_whitelist.output
+    params:
+        outdir = join(STAR_INTERIM, '{sample}', 'outs')
+    threads:
+        12
+    output:
+        barcodes = join(STAR_INTERIM, '{sample}', 'outs', 'Solo.out', 'barcodes.tsv'),
+        gene_stats = join(STAR_INTERIM, '{sample}', 'outs', 'Solo.out', 'Gene.stats'),
+        genes = join(STAR_INTERIM, '{sample}', 'outs', 'Solo.out', 'genes.tsv'),
+        feature_mtx = join(STAR_INTERIM, '{sample}', 'outs', 'Solo.out', 'matrix.mtx'),
+    singularity:
+        STAR_CONF['docker']
+    shell:
+        'STAR --soloType Droplet '
+        '--soloCBwhitelist {input.whitelist} '
+        '--readFilesIn {input.R2} {input.R1} '
+        '--readFilesCommand zcat '
+        '--genomeDir {input.transcriptome} '
+        '--outFileNamePrefix {params.outdir} '
+        '--runThreadN 12 '
+        '--soloCBlen 16 '
+        '--soloUMIlen 12'
+
