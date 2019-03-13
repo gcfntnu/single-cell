@@ -28,12 +28,12 @@ rule starsolo:
         transcriptome = join(ENSEMBL_EXT,'star','SA'),
         whitelist = rules.txgenomics_whitelist.output
     params:
-        outdir = join(STAR_INTERIM, '{sample}'),
+        outdir = join(STAR_INTERIM, '{sample}') + '/',
         transcriptome_dir = join(ENSEMBL_EXT,'star'),
         R1 = input_string_R1,
         R2 = input_string_R2
     threads:
-        12
+        24
     output:
         barcodes = join(STAR_INTERIM, '{sample}', 'Solo.out', 'barcodes.tsv'),
         gene_stats = join(STAR_INTERIM, '{sample}', 'Solo.out', 'Gene.stats'),
@@ -41,6 +41,8 @@ rule starsolo:
         feature_mtx = join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx'),
     singularity:
         STAR_CONF['docker']
+    benchmark:
+        'benchmark/starsolo/{sample}-starsolo.txt'
     shell:
         'STAR --soloType Droplet '
         '--soloCBwhitelist {input.whitelist} '
@@ -48,7 +50,8 @@ rule starsolo:
         '--readFilesCommand zcat '
         '--genomeDir {params.transcriptome_dir} '
         '--outFileNamePrefix {params.outdir} '
-        '--runThreadN 12 '
+        '--runThreadN {threads} '
         '--soloCBlen 16 '
-        '--soloUMIlen 10'
+        '--soloUMIlen 12 '
+        '--genomeLoad LoadAndKeep '
 
