@@ -9,6 +9,7 @@ if os.path.exists(extra_conf_fn):
 #config
 ORG = config.get('organism', 'homo_sapiens')
 FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
+FASTQS_REL_PATH = config.get('fastqs_rel_path')
 CR_PROCESSED = join(QUANT_PROCESSED, 'cellranger')
 CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
 CR_CONF = config.get('cellranger')
@@ -28,14 +29,44 @@ rule cellranger_count:
         R2 = get_filtered_fastq_R2,
         transcriptome = join(EXT_DIR, REF, 'reference.json')
     params:
-        input = rules.fastp_10x.params.out if not config['filter']['skip'] else FASTQ_DIR,
+        input = rules.fastp_10x.params.out if not config['filter']['skip'] else join(FASTQ_DIR,FASTQS_REL_PATH,'{sample}'), 
         id = '{sample}',
         outdir = CR_INTERIM,
         sample = '{sample}',
         transcriptome = join(EXT_DIR, REF),
-        ncells = 3000
+        ncells = 8500
     threads:
-        12
+        48
+    output:
+        summary = join('{sample}', 'outs', 'web_summary.html'),
+        raw_h5 = join('{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
+        filt_h5 = join('{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
+        mol_h5 = join('{sample}', 'outs', 'molecule_info.h5'),
+        raw_mtx = directory(join('{sample}', 'outs', 'raw_feature_bc_matrix')),
+        filt_mtx = directory(join('{sample}', 'outs', 'filtered_feature_bc_matrix'))
+    singularity:
+        CR_CONF['docker']
+    benchmark:
+        'benchmark/cellranger/{sample}-cellranger-count.txt'
+    shell:
+        'rm -rf {params.id} && '
+        'cellranger count '
+        '--fastqs {params.input} '
+        '--id {params.id} '
+        '--sample {params.sample} '
+        '--transcriptome {params.transcriptome} '
+        '--expect-cells {params.ncells} '
+        '--disable-ui '
+        '--localcores {threads} '
+
+rule move_cellranger:
+    input:
+        rules.cellranger_count.output.summary,
+        rules.cellranger_count.output.raw_h5, 
+        rules.cellranger_count.output.filt_h5,
+        rules.cellranger_count.output.mol_h5,
+        rules.cellranger_count.output.raw_mtx, 
+        rules.cellranger_count.output.filt_mtx
     output:
         summary = join(CR_INTERIM, '{sample}', 'outs', 'web_summary.html'),
         raw_h5 = join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
@@ -43,23 +74,18 @@ rule cellranger_count:
         mol_h5 = join(CR_INTERIM, '{sample}', 'outs', 'molecule_info.h5'),
         raw_mtx = directory(join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix')),
         filt_mtx = directory(join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix'))
-    singularity:
-        CR_CONF['docker']
+    params:
+        outdir = CR_INTERIM,
+        sample = '{sample}',
+    threads:
+        1
     shell:
-        'rm -rf {params.outdir} && '
-        'cellranger count '
-        '--fastqs {params.input} '
-        '--id {params.id} '
-        '--sample {params.sample} '
-        '--transcriptome {params.transcriptome} '
-        '--expect-cells {params.ncells} '
-        '--nosecondary '
-        '--disable-ui '
-        '--nopreflight '
-        '--localcores {threads} && '
-        'cp -r {params.id} {params.outdir} && '
-        'rm -rf {params.id} '
+        'cp -r {params.sample} {params.outdir} && '
+        'rm -rf {params.sample} '
+         
 
+
+"""
 rule cellranger_aggr_csv:
     input: 
         get_aggr_mol
@@ -97,7 +123,7 @@ rule cellranger_aggr:
         '--localcores={threads} && '
         'cp -r {params.id} {params.outdir} && '
         'rm -rf {params.id} '
-
+"""
 rule cellranger_seurat:
     input:
         join(CR_INTERIM, '{sample}', 'outs','filtered_feature_bc_matrix')
