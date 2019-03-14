@@ -1,3 +1,4 @@
 data/
 benchmark/
 .snakmemake/
+*.sw[po]

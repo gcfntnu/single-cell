@@ -19,16 +19,26 @@ TX_EXT = join(EXT_DIR, '10xgenomics')
 TX_CONFIG = config.get('10xgenomics', {})
 
 rule txgenomics_whitelist:
+    params:
+        #fn = '3M-february-2018.txt',
+        fn = '737K-august-2016.txt',
+        url = TX_CONFIG['whitelist_url']
+    output:
+        join(TX_EXT, 'whitelist.txt')
+    shell:
+        'wget -O {output} {params.url}/{params.fn}'
+
+rule old_txgenomics_whitelist:
     input:
         url = TX_CONFIG['cellranger_url']
     params:
-        fn = 'cellranger-3.0.0/cellranger-cs/3.0.0/lib/python/cellranger/barcodes/3M-february-2018.txt.gz'
+        fn = 'cellranger-3.0.2/cellranger-cs/3.0.2/lib/python/cellranger/barcodes/3M-february-2018.txt.gz'
     output:
         join(TX_EXT, 'whitelist.txt')
     shadow:
         'shallow'
     shell:
-        'curl -o cellranger-3.0.0.tar.gz {input.url} && tar --extract --file=cellranger-3.0.0.tar.gz -O {params.fn} | gunzip -c > {output}'
+        'curl -o cellranger-3.0.2.tar.gz {input.url} && tar --extract --file=cellranger-3.0.2.tar.gz -O {params.fn} | gunzip -c > {output}'
 
 rule txgenomics_org_prebuild:
     params:
