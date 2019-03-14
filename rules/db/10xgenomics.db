@@ -20,7 +20,8 @@ TX_CONFIG = config.get('10xgenomics', {})
 
 rule txgenomics_whitelist:
     params:
-        fn = '3M-february-2018.txt',
+        #fn = '3M-february-2018.txt',
+        fn = '737K-august-2016.txt',
         url = TX_CONFIG['whitelist_url']
     output:
         join(TX_EXT, 'whitelist.txt')

@@ -28,7 +28,7 @@ rule starsolo:
         transcriptome = join(ENSEMBL_EXT,'star','SA'),
         whitelist = rules.txgenomics_whitelist.output
     params:
-        outdir = join(STAR_INTERIM, '{sample}'),
+        outdir = join(STAR_INTERIM, '{sample}') + '/',
         transcriptome_dir = join(ENSEMBL_EXT,'star'),
         R1 = input_string_R1,
         R2 = input_string_R2
@@ -52,3 +52,16 @@ rule starsolo:
         '--soloCBlen 16 '
         '--soloUMIlen 10'
 
+rule star_scanpy:
+    input:
+        join(STAR_INTERIM, '{sample}', 'Solo.out')
+    params:
+        script = srcdir('scripts/cellranger_scanpy.py'),
+        genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else ''
+    output:
+        join(STAR_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.3.7'
+    shell:
+        'python {params.script} -i {input} -o {output} {params.genome} '
+ 
