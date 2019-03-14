@@ -33,7 +33,7 @@ rule starsolo:
         R1 = input_string_R1,
         R2 = input_string_R2
     threads:
-        24
+        48
     output:
         barcodes = join(STAR_INTERIM, '{sample}', 'Solo.out', 'barcodes.tsv'),
         gene_stats = join(STAR_INTERIM, '{sample}', 'Solo.out', 'Gene.stats'),
@@ -57,14 +57,14 @@ rule starsolo:
 
 rule star_scanpy:
     input:
-        join(STAR_INTERIM, '{sample}', 'Solo.out')
+        join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx')
     params:
         script = srcdir('scripts/cellranger_scanpy.py'),
-        genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else ''
+        input = join(STAR_INTERIM, '{sample}', 'Solo.out')
     output:
         join(STAR_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.3.7'
     shell:
-        'python {params.script} -i {input} -o {output} {params.genome} '
+        'python {params.script} -i {params.input} -o {output} '
  

@@ -9,7 +9,7 @@ if os.path.exists(extra_conf_fn):
 #config
 ORG = config.get('organism', 'homo_sapiens')
 FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
-FASTQS_REL_PATH = config.get('fastqs_rel_path')
+FASTQS_REL_PATH = config.get('fastqs_rel_path','')
 CR_PROCESSED = join(QUANT_PROCESSED, 'cellranger')
 CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
 CR_CONF = config.get('cellranger')
