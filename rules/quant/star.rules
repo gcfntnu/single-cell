@@ -30,6 +30,8 @@ rule starsolo:
     params:
         outdir = join(STAR_INTERIM, '{sample}') + '/',
         transcriptome_dir = join(ENSEMBL_EXT,'star'),
+        cb_len = config['star']['cb_len'],
+        umi_len = config['star']['umi_len'],
         R1 = input_string_R1,
         R2 = input_string_R2
     threads:
@@ -51,8 +53,8 @@ rule starsolo:
         '--genomeDir {params.transcriptome_dir} '
         '--outFileNamePrefix {params.outdir} '
         '--runThreadN {threads} '
-        '--soloCBlen 16 '
-        '--soloUMIlen 12 '
+        '--soloCBlen {params.cb_len} '
+        '--soloUMIlen {params.umi_len} '
         '--genomeLoad LoadAndKeep '
 
 rule star_scanpy:
