@@ -65,11 +65,11 @@ rule txgenomics_gtf_extract_biotypes:
     input:
         rules.txgenomics_org_prebuild.output.gtf
     output:
-        join(TX_EXT,'gtf_gene_biotypes.csv')
+        join(TX_EXT,'gtf_gene_biotypes.tsv')
     threads:
         1
     shell:
-        'awk \'BEGIN {{printf "gene_id,gene_biotype\\n"}} $3 == "gene" {{for(i=1;i<=NF;i++)if($i=="gene_biotype") print substr($10,1,length($10)-1) "," substr($(i+1),1,length($(i+1))-1) }}\' {input} > {output}'
+        'awk \'BEGIN {{printf "gene_id\\tgene_biotype\\n"}} $3 == "gene" {{for(i=1;i<=NF;i++)if($i=="gene_biotype") print substr($10,1,length($10)-1) "\\t" substr($(i+1),1,length($(i+1))-1) }}\' {input} > {output}'
 
         
 rule txgenomics_alevin_index:
