@@ -3,6 +3,7 @@ FROM ubuntu:18.04
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH /opt/conda/bin:$PATH
 ENV MPLBACKEND TkAgg
+ENV SCANPY_VER 1.4
 
 RUN apt-get update --fix-missing && \
     apt-get install -y \
@@ -32,11 +33,10 @@ CMD [ "/bin/bash" ]
 
 RUN conda update conda
 RUN conda config --add channels defaults
-RUN conda config --add channels r
 RUN conda config --add channels bioconda
 RUN conda config --add channels conda-forge
 
-RUN conda install --quiet --yes scanpy pip dask dca pypairs numba multicore-tsne cython joblib pandas numpy scipy matplotlib
+RUN conda install --quiet --yes scanpy=$SCANPY_VER pip dask dca pypairs numba multicore-tsne cython joblib pandas==0.23.4 numpy scipy matplotlib
 RUN conda clean -tipsy
 
 RUN pip --no-cache-dir install phate fa2 bbknn magic-impute leidenalg vpolo annoy scprep zappy bioservices

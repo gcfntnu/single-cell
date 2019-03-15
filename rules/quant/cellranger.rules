@@ -12,9 +12,8 @@ FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 FASTQS_REL_PATH = config.get('fastqs_rel_path','')
 CR_PROCESSED = join(QUANT_PROCESSED, 'cellranger')
 CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
-CR_CONF = config.get('cellranger')
+CR_CONF = config['quant']['cellranger']
 REF = config['quant']['reference']
-
 
 def get_aggr_mol(wildcards):
     #samples = CR_AGGR[wildcards.group]
@@ -29,12 +28,12 @@ rule cellranger_count:
         R2 = get_filtered_fastq_R2,
         transcriptome = join(EXT_DIR, REF, 'reference.json')
     params:
-        input = rules.fastp_10x.params.out if not config['filter']['skip'] else join(FASTQ_DIR,FASTQS_REL_PATH,'{sample}'), 
+        input = rules.fastp_10x.params.out if not config['filter']['skip'] else join(FASTQ_DIR, FASTQS_REL_PATH, '{sample}'), 
         id = '{sample}',
         outdir = CR_INTERIM,
         sample = '{sample}',
         transcriptome = join(EXT_DIR, REF),
-        ncells = 8500
+        ncells = config['quant']['cellranger']['ncells']
     threads:
         48
     output:
@@ -59,7 +58,7 @@ rule cellranger_count:
         '--disable-ui '
         '--localcores {threads} '
 
-rule move_cellranger:
+rule cellranger_quant:
     input:
         rules.cellranger_count.output.summary,
         rules.cellranger_count.output.raw_h5, 
@@ -124,6 +123,7 @@ rule cellranger_aggr:
         'cp -r {params.id} {params.outdir} && '
         'rm -rf {params.id} '
 """
+
 rule cellranger_seurat:
     input:
         join(CR_INTERIM, '{sample}', 'outs','filtered_feature_bc_matrix')
@@ -138,13 +138,14 @@ rule cellranger_seurat:
 
 rule cellranger_scanpy:
     input:
-        join(CR_INTERIM, '{sample}', 'outs','filtered_feature_bc_matrix')
+        expand(join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'matrix.mtx.gz'), sample=SAMPLES)
     params:
         script = srcdir('scripts/cellranger_scanpy.py'),
-        genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else ''
+        genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else '',
+        samples = ','.join(SAMPLES)
     output:
-        join(CR_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
+        join(CR_PROCESSED, 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.3.7'
+        'docker://gcfntnu/scanpy:1.4'
     shell:
-        'python {params.script} -i {input} -o {output} {params.genome} '
+        'python {params.script} {input} -o {output} {params.genome} --samples {params.samples} '

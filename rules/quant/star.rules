@@ -11,14 +11,13 @@ ORG = config.get('organism', 'homo_sapiens')
 FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 STAR_PROCESSED = join(QUANT_PROCESSED, 'star')
 STAR_INTERIM = join(QUANT_INTERIM, 'star')
-STAR_CONF = config.get('star')
-REF = config['star']['reference']
+STAR_CONF = config['quant'].get('star', {})
+REF = config['quant']['reference']
 
-def input_string_R1(wildcards):
+def starsolo_R1(wildcards):
     return ','.join(get_filtered_fastq_R1(wildcards))
 
-
-def input_string_R2(wildcards):
+def starsolo_R2(wildcards):
     return ','.join(get_filtered_fastq_R2(wildcards))
 
 rule starsolo:
@@ -29,11 +28,11 @@ rule starsolo:
         whitelist = rules.txgenomics_whitelist.output
     params:
         outdir = join(STAR_INTERIM, '{sample}') + '/',
-        transcriptome_dir = join(ENSEMBL_EXT,'star'),
-        cb_len = config['star']['cb_len'],
-        umi_len = config['star']['umi_len'],
-        R1 = input_string_R1,
-        R2 = input_string_R2
+        genome_dir = join(ENSEMBL_EXT, 'star'),
+        cb_len = STAR_CONF['cb_len'],
+        umi_len = STAR_CONF['umi_len'],
+        R1 = starsolo_R1,
+        R2 = starsolo_R2
     threads:
         48
     output:
@@ -50,7 +49,7 @@ rule starsolo:
         '--soloCBwhitelist {input.whitelist} '
         '--readFilesIn {params.R2} {params.R1} '
         '--readFilesCommand zcat '
-        '--genomeDir {params.transcriptome_dir} '
+        '--genomeDir {params.genome_dir} '
         '--outFileNamePrefix {params.outdir} '
         '--runThreadN {threads} '
         '--soloCBlen {params.cb_len} '
