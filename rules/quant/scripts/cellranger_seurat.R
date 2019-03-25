@@ -5,23 +5,17 @@ suppressPackageStartupMessages(require(Seurat))
 if (!require(Seurat)) {
     stop("This script needs to have Seurat installed.")
 }
-if (!require(argparse)) {
-    install.packages("argparse", repos="http://cran.rstudio.com")
-    library("argparse")
-}
-
-
-if (!require(Matrix)) {
-    install.packages("Matrix", repos="http://cran.rstudio.com")
-    library("Matrix")
+if (!require(optparse)) {
+    stop("This script needs to have optparse installed.")
 }
 
 
 parser <- ArgumentParser()
-parser$add_argument("-i", "--input", default="data/tmp/test_sample/outs/filtered_gene_bc_matrices", nargs="+",
+parser$add_argument("-i", "input", default="data/tmp/test_sample/outs/filtered_gene_bc_matrices", nargs="+",
                     help="Directory containing the matrix.mtx.gz, genes.tsv.gz, and barcodes.tsv.gz files provided by 10X. Multiple dirs allowed.")
 parser$add_argument("-s", "--sample-info", dest="samples", default=NULL,
                     help="Sample info. Tab delimited file, needs column with `sample_id`")
+parser$add_argument("-f", "--format", choices=['seurat', 'loom', 'csvs'], default='seurat', help='output file format')
 parser$add_argument("-o", "--output", default="data/processed/test_sample/seurat_obj.rds",
                     help="Output filename (rds file)")
 parser$add_argument("-v", "--verbose", action="store_true",
