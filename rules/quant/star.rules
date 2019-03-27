@@ -24,7 +24,7 @@ rule starsolo:
     input:
         R1 = get_filtered_fastq_R1,
         R2 = get_filtered_fastq_R2,
-        transcriptome = join(ENSEMBL_EXT,'star','SA'),
+        transcriptome = join(ENSEMBL_EXT, 'star', 'SA'),
         whitelist = rules.txgenomics_whitelist.output
     params:
         outdir = join(STAR_INTERIM, '{sample}') + '/',

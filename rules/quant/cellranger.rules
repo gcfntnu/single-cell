@@ -1,5 +1,7 @@
 #-*- mode:snakemake -*-
 
+import os
+
 extra_conf_fn = srcdir('cellranger.config')
 if os.path.exists(extra_conf_fn):
     with open(extra_conf_fn) as fh:
@@ -81,34 +83,48 @@ rule cellranger_quant:
     shell:
         'cp -r {params.sample} {params.outdir} && '
         'rm -rf {params.sample} '
-         
 
-
-"""
 rule cellranger_aggr_csv:
-    input: 
-        get_aggr_mol
+    input:
+        sample_info = 'data/processed/sample_info.txt',
+        mol_h5 = expand(rules.cellranger_quant.output.mol_h5, sample=SAMPLES)
     output:
-        join(CR_INTERIM, '{group}_aggr.csv')
+        csv = join(CR_INTERIM, 'aggr.csv')
     run:
-        with open(output[0],'w') as aggr:
-            aggr.write("library_id,molecule_h5\n")
-            for sample in input:
-                aggr.write(','.join([sample.split('/')[-3],'{}\n'.format(sample)])) 
-        
+        import pandas as pd
+        batch = CR_CONF['aggregate'].get('batch')
+        df = pd.read_csv(input.sample_info, sep='\t')
+        df.index = df['Sample_ID']
+        valid_samples = list(df['Sample_ID'])
+        with open(output.csv, 'w') as aggr:
+            if batch is not None:
+                assert(batch in df.columns)
+                aggr.write('library_id,molecule_h5,batch\n')
+            else:
+                aggr.write('library_id,molecule_h5\n')
+            for mol_h5 in input.mol_h5:
+                sample = mol_h5.split(os.path.sep)[-3]
+                if sample in valid_samples:
+                    if batch is not None:
+                        aggr.write('{},{},{}\n'.format(sample, mol_h5, df.loc[sample][batch]))
+                    else:
+                        aggr.write('{},{}\n'.format(sample, mol_h5)) 
+                else:
+                    logger.error('{} not in {}'.format(sample, str(valid_samples)))
+
 rule cellranger_aggr:
     input:
-        #csv =join(CR_INTERIM, '{group}_aggr.csv') 
         csv = rules.cellranger_aggr_csv.output
     output:
-        summary = join(CR_INTERIM, '{group}', 'outs', 'web_summary.html'),
-        raw_h5 = join(CR_INTERIM, '{group}', 'outs', 'raw_feature_bc_matrix.h5'),
-        filt_h5 = join(CR_INTERIM, '{group}', 'outs', 'filtered_feature_bc_matrix.h5'),
-        raw_mtx = directory(join(CR_INTERIM, '{group}', 'outs', 'raw_feature_bc_matrix')),
-        filt_mtx = directory(join(CR_INTERIM, '{group}', 'outs', 'filtered_feature_bc_matrix'))
+        summary = join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs', 'web_summary.html'),
+        raw_h5 = join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs', 'raw_feature_bc_matrix.h5'),
+        filt_h5 = join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs','filtered_feature_bc_matrix.h5'),
+        raw_mtx = directory(join(QUANT_INTERIM, 'aggregate', 'cellranger','outs', 'raw_feature_bc_matrix')),
+        filt_mtx = directory(join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs', 'filtered_feature_bc_matrix'))
     params:
-        outdir = CR_INTERIM,
-        id = '{group}'
+        outdir = join(QUANT_INTERIM, 'aggregate'),
+        id = 'cellranger',
+        norm = CR_CONF['aggregate'].get('norm', 'none')
     threads:
         12
     singularity:
@@ -117,13 +133,12 @@ rule cellranger_aggr:
         'cellranger aggr '
         '--csv {input.csv} '
         '--id {params.id} '
-        '--normalize=mapped '
+        '--normalize={params.norm} '
         '--disable-ui '
         '--localcores={threads} && '
-        'cp -r {params.id} {params.outdir} && '
+        'cp -r {params.id} {params.outdir}/ && '
         'rm -rf {params.id} '
-"""
-
+        
 rule cellranger_seurat:
     input:
         join(CR_INTERIM, '{sample}', 'outs','filtered_feature_bc_matrix')
@@ -138,13 +153,13 @@ rule cellranger_seurat:
 
 rule cellranger_scanpy:
     input:
-        expand(join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'matrix.mtx.gz'), sample=SAMPLES)
+        expand(rules.cellranger_quant.output.summary, sample=SAMPLES) if CR_CONF['aggregate']['skip'] else rules.cellranger_aggr.output.summary
     params:
         script = srcdir('scripts/cellranger_scanpy.py'),
         genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else '',
         samples = ','.join(SAMPLES)
     output:
-        join(CR_PROCESSED, 'scanpy', 'adata.h5ad')
+        join(CR_PROCESSED, 'scanpy', 'adata2.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.4'
     shell:

@@ -62,13 +62,13 @@ rule alevin_seurat:
 
 rule alevin_scanpy:
     input:
-        rules.alevin_quant.output.quant
+        expand(rules.alevin_quant.output.quant, sample=SAMPLES)
     params:
         script = srcdir('scripts/alevin_scanpy.py')
     output:
-        join(AVN_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
+        join(AVN_PROCESSED, 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.3.7'
+        'docker://gcfntnu/scanpy:1.4'
     shell:
         'python {params.script} -i {input} -o {output} '
 
