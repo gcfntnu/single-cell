@@ -126,7 +126,7 @@ rule cellranger_aggr:
         id = 'cellranger',
         norm = CR_CONF['aggregate'].get('norm', 'none')
     threads:
-        12
+        48
     singularity:
         CR_CONF['docker']
     shell:
@@ -135,11 +135,13 @@ rule cellranger_aggr:
         '--id {params.id} '
         '--normalize={params.norm} '
         '--disable-ui '
+        '--nosecondary '
+        '--nopreflight '
         '--localcores={threads} && '
         'cp -r {params.id} {params.outdir}/ && '
         'rm -rf {params.id} '
         
-rule cellranger_seurat:
+rule cellranger_seurat_aggr:
     input:
         join(CR_INTERIM, '{sample}', 'outs','filtered_feature_bc_matrix')
     params:
@@ -151,13 +153,13 @@ rule cellranger_seurat:
     shell:
         'Rscript {params.script} --input {input} --output {output}'
 
-rule cellranger_scanpy:
+rule cellranger_scanpy_aggr:
     input:
-        expand(rules.cellranger_quant.output.summary, sample=SAMPLES) if CR_CONF['aggregate']['skip'] else rules.cellranger_aggr.output.summary
+        expand(rules.cellranger_quant.output.summary, sample=SAMPLES) if CR_CONF['aggregate']['skip'] else rules.cellranger_aggr.output.filt_mtx
     params:
         script = srcdir('scripts/cellranger_scanpy.py'),
         genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else '',
-        samples = ','.join(SAMPLES)
+        samples = ','.join(SAMPLES) if CR_CONF['aggregate']['skip'] else 'aggr'
     output:
         join(CR_PROCESSED, 'scanpy', 'adata2.h5ad')
     singularity:
