@@ -1,0 +1,3 @@
+[submodule "rules/gcfdb"]
+	path = rules/gcfdb
+	url = git@github.com:flatberg/gcfdb.git

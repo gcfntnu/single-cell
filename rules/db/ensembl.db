@@ -99,6 +99,17 @@ rule ensembl_gtf:
     shell: 
         'wget -O - {params.url} -o {log} | gunzip -c > {output}'
 
+rule ensembl_gtf_extract_biotypes:
+    input:
+        rules.ensembl_gtf.output
+    output:
+        join(ENSEMBL_EXT,'gtf_gene_biotypes.tsv')
+    threads:
+        1
+    shell:
+        'awk \'BEGIN {{printf "gene_id\\tgene_biotype\\n"}} $3 == "gene" {{for(i=1;i<=NF;i++)if($i=="gene_biotype") print substr($10,1,length($10)-1) "\\t" substr($(i+1),1,length($(i+1))-1) }}\' {input} > {output}'
+
+
 rule ensembl_addercc2genome:
     input:
         rules.ensembl_dna.output,
