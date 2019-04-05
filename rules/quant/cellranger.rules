@@ -43,8 +43,8 @@ rule cellranger_count:
         raw_h5 = join('{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
         filt_h5 = join('{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
         mol_h5 = join('{sample}', 'outs', 'molecule_info.h5'),
-        raw_mtx = directory(join('{sample}', 'outs', 'raw_feature_bc_matrix')),
-        filt_mtx = directory(join('{sample}', 'outs', 'filtered_feature_bc_matrix'))
+        raw_mtx = join('{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
+        filt_mtx = join('{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     singularity:
         CR_CONF['docker']
     benchmark:
@@ -73,8 +73,8 @@ rule cellranger_quant:
         raw_h5 = join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
         filt_h5 = join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
         mol_h5 = join(CR_INTERIM, '{sample}', 'outs', 'molecule_info.h5'),
-        raw_mtx = directory(join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix')),
-        filt_mtx = directory(join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix'))
+        raw_mtx = join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
+        filt_mtx = join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     params:
         outdir = CR_INTERIM,
         sample = '{sample}',
@@ -119,8 +119,8 @@ rule cellranger_aggr:
         summary = join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs', 'web_summary.html'),
         raw_h5 = join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs', 'raw_feature_bc_matrix.h5'),
         filt_h5 = join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs','filtered_feature_bc_matrix.h5'),
-        raw_mtx = directory(join(QUANT_INTERIM, 'aggregate', 'cellranger','outs', 'raw_feature_bc_matrix')),
-        filt_mtx = directory(join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs', 'filtered_feature_bc_matrix'))
+        raw_mtx = join(QUANT_INTERIM, 'aggregate', 'cellranger','outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
+        filt_mtx = join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     params:
         outdir = join(QUANT_INTERIM, 'aggregate'),
         id = 'cellranger',
@@ -155,14 +155,27 @@ rule cellranger_seurat_aggr:
 
 rule cellranger_scanpy_aggr:
     input:
-        expand(rules.cellranger_quant.output.summary, sample=SAMPLES) if CR_CONF['aggregate']['skip'] else rules.cellranger_aggr.output.filt_mtx
+        expand(rules.cellranger_quant.output.filt_h5, sample=SAMPLES)
     params:
         script = srcdir('scripts/cellranger_scanpy.py'),
-        genome = '--genome {}'.format(config['scanpy']['genome']) if 'scanpy' in config else '',
-        samples = ','.join(SAMPLES) if CR_CONF['aggregate']['skip'] else 'aggr'
+        org = config['organism']
     output:
-        join(CR_PROCESSED, 'scanpy', 'adata2.h5ad')
+        join(QUANT_INTERIM, 'aggregate', 'cellranger', 'scanpy', 'scanpy_aggr.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.4'
     shell:
-        'python {params.script} {input} -o {output} {params.genome} --samples {params.samples} '
+        'python {params.script} {input} -o {output} -f cellranger --normalize mapped --genome {params.org}'
+
+rule cellranger_scanpy_convert:
+    input:
+        rules.cellranger_aggr.output.filt_h5
+    params:
+        script = srcdir('scripts/cellranger_scanpy.py'),
+        org = config['organism']
+    output:
+        join(QUANT_INTERIM, 'aggregate', 'cellranger', 'scanpy', 'cellranger_aggr.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.4'
+    shell:
+        'python {params.script} {input} -o {output} -f cellranger_aggr --genome {params.org}'
+
