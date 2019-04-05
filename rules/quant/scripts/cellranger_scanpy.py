@@ -8,6 +8,8 @@ import os
 import argparse
 
 import scanpy  as sc
+import pandas as pd
+import numpy as np
 
 GENOME = {'homo_sapiens': 'GRCh38',
           'human': 'GRCh38',
@@ -23,15 +25,15 @@ parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.R
 
 parser.add_argument('input', help='input file(s)', nargs='+')
 parser.add_argument('-o', '--outfile', help='output filename', required=True)
-parser.add_argument('-f', '--format', choices=['anndata', 'loom', 'csvs'], default='anndata', help='output file format')
-parser.add_argument('--samples', help='comma separated list of sample names. Used as `batch_categories` in anndata. Also used to match `Sample_ID` in optional samplesheet', default=None)
-parser.add_argument('--sample-sheet', help='samplesheet filename, tab seprated file assumes `Sample_ID` in header', default=None)
+parser.add_argument('-f', '--input-format', choices=['cellranger_aggr', 'cellranger', 'star', 'alevin', 'umitools'], default='cellranger_aggr', help='input file format')
+parser.add_argument('-F', '--output-format', choices=['anndata', 'loom', 'csvs'], default='anndata', help='output file format')
+parser.add_argument('--sample-info', help='samplesheet info, tab seprated file assumes `Sample_ID` in header', default=None)
 parser.add_argument('--feature-info', help='extra feature info filename, tab seprated file assumes `gene_id` in header', default=None)
 parser.add_argument('--genome', help='reference genome', default=None)
 parser.add_argument('--filter-org', help='filter data (genes) by organism', default=None)
-parser.add_argument('--var-names', help='filter data (genes) by organism', default='gene_ids', choices=['gene_ids', 'gene_symbols'])
 parser.add_argument('--gex-only', help='only keep `Gene Expression` data and ignore other feature types.', default=True)
 parser.add_argument('--normalize', help='normalize depth across the input libraries', default='none', choices=['none', 'mapped'])
+parser.add_argument('--batch', help='column name in `sample-info` with batch covariate', default=None)
 parser.add_argument('--verbose', help='verbose output.', action='store_true')
 
 
@@ -39,6 +41,7 @@ def downsample_gemgroup(data_list):
     """downsample data total read count to gem group with lowest total count
     """
     min_count = 1E99
+    sampled_list = []
     for i, data in enumerate(data_list):
         isum = data.X.sum()
         if isum < min_count:
@@ -46,73 +49,104 @@ def downsample_gemgroup(data_list):
             idx = i
     for j, data in enumerate(data_list):
         if j != idx:
-            data = sc.pp.downsample(data, total_counts = min_count)
-        data_list[j] = data
-    return data_list
+            sc.pp.downsample_counts(data, target_counts = min_count)
+        sampled_list.append(data)
+    return sampled_list
 
+def read_cellranger(fn, args):
+    """read cellranger results
+
+    Assumes the Sample_ID may be extracted from cellranger output dirname, 
+    e.g ` ... /Sample_ID/outs/filtered_feature_bc_matrix.h5 `
+    """
+    if fn.endswith('.h5'):
+        if not args.genome:
+            raise ValueError('loading a .h5 file in scanpy requires the `genome` parameter')
+        dirname = os.path.dirname(fn)
+        data = sc.read_10x_h5(fn, genome=GENOME[args.genome])
+        data.var['gene_symbols'] = list(data.var_names)
+        data.var_names = list(data.var['gene_ids'])
+    else:
+        mtx_dir = os.path.dirname(fn)
+        dirname = os.path.dirname(mtx_dir)
+        data = sc.read_10x_mtx(mtx_dir, gex_only=args.gex_only, var_names='gene_ids', make_unique=True)
+        data.var['gene_ids'] = list(data.var_names)
+    sample_id = os.path.basename(os.path.dirname(dirname))
+    data.obs['library_id'] = [sample_id] * data.obs.shape[0]
+    barcodes = [b.split('-')[0] for b in data.obs.index]
+    if len(barcodes) == len(set(barcodes)):
+        data.obs_names = barcodes
+    data.obs.index.name = 'barcodes'
+    data.var.index.name = 'gene_id'
+    return data
+        
+def read_cellranger_aggr(fn, args):
+    data = read_cellranger(fn, args)
+    dirname = os.path.dirname(fn)
+    if not fn.endswith('.h5'):
+        dirname = os.path.dirname(dirname)
+
+    # fix cellranger aggr enumeration to start at 0 (matches scanpy enum)
+    barcodes =  [i[0] for i in data.obs.index.str.split('-')]
+    barcode_enum = [int(i[1])-1 for i in data.obs.index.str.split('-')]
+    data.obs_names = ['-'.join(e) for e in zip(barcodes, barcodes_enum)]
+
+    aggr_csv = os.path.join(dirname, 'aggregation.csv')
+    if os.path.exists(aggr_csv):
+        aggr_csv = pd.read_csv(aggr_csv)
+        sample_map = dict((i, n) for i,n in enumerate(aggr_csv['library_id']))
+        samples = [sample_map[i] for i in barcode_enum]
+        
+        data.obs['library_id'] = samples
+    return data
+
+def read_star(fn, args):
+    raise NotImplementedError
+
+def read_umitools(fn, args):
+    raise NotImplementedError
+
+READERS = {'cellranger_aggr': read_cellranger_aggr, 'cellranger': read_cellranger, 'star': read_star, 'unitools': read_umitools}
+        
 if __name__ == '__main__':
-    aggr_input = False
-    samples = []
-    sample_info = None
     args = parser.parse_args()
+    
+    reader = READERS.get(args.input_format.lower())
+    if reader is None:
+        raise ValueError('{} is not a supported input format'.format(args.input_format))
     for fn in args.input:
         if not os.path.exists(fn):
             raise IOError('file does not exist! {}'.format(fn))
-        
-    if args.samples is not None:
-        samples = args.samples.split(',')
-        if len(samples) != len(args.input):
-            msg = 'number of sampleslisted in --samples : {} does not match number of of inputs: {} '
-            raise ValueError(msg.format(len(samples), len(args.input)))
-        if len(samples) == 1 and samples[0] == 'aggr':
-            aggr_input = True
+    n_input = len(args.input)
+    if n_input > 1:
+        assert(args.input_format != 'cellranger_aggr')
             
-    if args.sample_sheet is not None:
-        sample_info = pd.read_csv(args.sample_sheet, sep='\t')
+    if args.sample_info is not None:
+        sample_info = pd.read_csv(args.sample_info, sep='\t')
         if not 'Sample_ID' in sample_info.columns:
             raise ValueError('sample_sheet needs a column called `Sample_ID`')
         sample_info.index = sample_info['Sample_ID']
+        if args.batch is not None:
+            batch_categories = sample_info[batch].astype('category')
+    else:
+        sample_info = None
+        if args.batch is not None:
+            raise ValueError('cannot use option `batch` when option `--sample-info` not used')
+        batch_categories = None
         
-        if args.samples is not None:
-            if all(i in sample_info.index for i in samples):
-                sample_info = sample_info.loc[samples,:]
-            else:
-                if not aggr_input:
-                    msg = 'samples not present in samplesheet: {}'
-                    raise ValueError(msg.format(set(samples).difference(sample_info.index)))
+    if args.feature_info is not None:
+        feature_info = pd.read_csv(args.feature_info, sep='\t')
+        if not 'gene_id' in feature_info.columns:
+            raise ValueError('feature_info needs a column called `gene_id`')
+        
+        feature_info.index = feature_info['gene_id']
+    else:
+        feature_info = None
+    
     data_list = []
     for i, fn in enumerate(args.input):
-        if fn.endswith('.h5'):
-            if not args.genome:
-                raise ValueError('loading a .h5 file in scanpy requires the `genome` parameter')
-            data = sc.read_10x_h5(fn, genome=args.genome)
-        else:
-            #dirname = os.path.dirname(fn)
-            data = sc.read_10x_mtx(fn, gex_only=args.gex_only, var_names=args.var_names, make_unique=True)
-
-        # remove the gem group numbering if cells originate from one gem pool 
-        cells = data.obs_names.copy()
-        barcodes = [i.split('-')[0] for i in cells]
-        if len(set(barcodes)) == len(barcodes):
-            data.obs_names = barcodes
-            
-        if args.filter_org is not None:
-            org = args.filter_org
-            if org in GENOME:
-                org = GENOME[org]
-            PREFIX = {'GRCh38': 'hg', 'GRCm38':'mm10'}
-            
-            raise NotImplementedError
-        
-        if samples:
-            gem_groups = [int(c.split('-')[-1])-1 for c in cells]
-            gem_names = [samples[g] for g in gem_groups]
-            data.obs['sample'] = gem_names
-            
-        if sample_info:
-            df = sample_info.loc[gem_names,:]
-            df.index = data.obs_names
-            obs = pd.concat(data.obs, df, axis=1)
+        fn = os.path.abspath(fn)
+        data = reader(fn, args)
         data_list.append(data)
 
     if len(data_list) > 1:
@@ -121,24 +155,34 @@ if __name__ == '__main__':
 
     data = data_list.pop(0)
     if len(data_list) > 0:
-        if args.samples is not None:
-            batch_key = 'Sample_ID'
-            batch_categories = samples
-        else:
-            batch_key = 'batch'
-            batch_categories = None    
-        data = data.concatenate(*data_list, batch_key=batch_key, batch_categories=batch_categories)
+        data = data.concatenate(*data_list, batch_categories=batch_categories)
+    # clean up feature info (assumes inner join)
+    # fixme: maybe outer join support is what we want ?
+    keep = [i for i in data.var.columns if i.endswith('-0')]
+    data.var  = data.var.loc[:,keep]
+    data.var.columns = [i.split('-')[0] for i in data.var.columns]
+    if sample_info:
+        lib_ids = set(data.obs['library_id'])
+        for l in lib_ids:
+            if l not in sample_info.index:
+                raise ValueError('Library `{}` not present in sample_info'.format(l))
+        obs = sample_info.loc[data.obs['library_id'],:]
+        obs.index = data.obs.index.copy()
+        data.obs = data.obs.merge(obs, how='left', on='barcode', copy=False)
+        
+    if feature_info:
+        data.var = data.var.merge(feature_info, how='left', on='gene_id', copy=False)
         
     if 'gene_symbols' in data.var.columns:
-        mito_genes = adata.var.gene_symbols.str.startswith('MT-')
-        adata.obs['fraction_mito'] = np.sum(adata[:, mito_genes].X, axis=1).A1 / np.sum(adata.X, axis=1).A1
-    adata.obs['n_counts'] = adata.X.sum(axis=1).A1
-    
-    if args.format == 'anndata':
+        mito_genes = data.var.gene_symbols.str.startswith('MT-')
+        data.obs['fraction_mito'] = np.sum(data[:, mito_genes].X, axis=1).A1 / np.sum(data.X, axis=1).A1
+    data.obs['n_counts'] = data.X.sum(axis=1).A1
+
+    if args.output_format == 'anndata':
         data.write(args.outfile)
-    elif args.format == 'loom':
+    elif args.output_format == 'loom':
         data.write_loom(args.outfile)
-    elif args.format == 'csvs':
+    elif args.output_format == 'csvs':
         data.write_csvs(args.outpfile)
     else:
-        raise ValueError
+        raise ValueError("Unknown output format: {}".format(args.output_format))
