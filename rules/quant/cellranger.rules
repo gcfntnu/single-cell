@@ -17,13 +17,6 @@ CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
 CR_CONF = config['quant']['cellranger']
 REF = config['quant']['reference']
 
-def get_aggr_mol(wildcards):
-    #samples = CR_AGGR[wildcards.group]
-    #quick fix - NOT OK
-    samples = expand('{g}_{s}',g=wildcards.group,s=['A','B'])
-    mol_files = expand(join(CR_INTERIM, '{sample}', 'outs', 'molecule_info.h5'), sample=samples)
-    return mol_files
-
 rule cellranger_count:
     input:
         R1 = get_filtered_fastq_R1,
