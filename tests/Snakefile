@@ -3,12 +3,22 @@ configfile:
 
 include:
     '../single-cell.sm'
+
+QUANT = ['cellranger', 'star']
+
+rule sample_info:
+    output:
+        'data/processed/sample_info.txt'
+    run:
+       import pandas as pd
+       df = pd.DataFrame.from_dict(config['samples'], orient='index')
+       df['Sample_ID'] = df.index
+       df.to_csv(output[0], sep='\t', index=False)
     
 rule test_filter:
     input:
         expand(rules.fastp_10x.output, sample=SAMPLES)
 
-rule test_cellranger:
+rule test_quant:
     input:
-        expand(join('data', 'processed', 'singlecell', 'quant', '{quant}', 'scanpy', '{sample}', '{sample}.h5ad'), sample=SAMPLES, quant=['cellranger', 'alevin', 'umitools']),
-        #expand(join('data', 'processed', 'singlecell', 'quant', '{quant}', 'seurat', '{sample}', '{sample}.rds'), sample=SAMPLES, quant=['cellranger', 'alevin', 'umitools'])
+        expand(join('data', 'tmp', 'singlecell', 'quant', '{quant}', '{sample}', 'scanpy/adata.h5ad'), sample=SAMPLES, quant=QUANT)

@@ -11,11 +11,11 @@ if os.path.exists(extra_conf_fn):
 #config
 ORG = config.get('organism', 'homo_sapiens')
 FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
-FASTQS_REL_PATH = config.get('fastqs_rel_path','')
 CR_PROCESSED = join(QUANT_PROCESSED, 'cellranger')
 CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
 CR_CONF = config['quant']['cellranger']
 REF = config['quant']['reference']
+
 
 rule cellranger_count:
     input:
@@ -23,7 +23,7 @@ rule cellranger_count:
         R2 = get_filtered_fastq_R2,
         transcriptome = join(EXT_DIR, REF, 'reference.json')
     params:
-        input = rules.fastp_10x.params.out if not config['filter']['skip'] else join(FASTQ_DIR, FASTQS_REL_PATH, '{sample}'), 
+        input = rules.fastp_10x.params.out if not config['filter']['skip'] else FASTQ_DIR,
         id = '{sample}',
         outdir = CR_INTERIM,
         sample = '{sample}',
@@ -161,14 +161,14 @@ rule cellranger_scanpy_aggr:
 
 rule cellranger_scanpy_convert:
     input:
-        rules.cellranger_aggr.output.filt_h5
+        join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')
     params:
         script = srcdir('scripts/cellranger_scanpy.py'),
         org = config['organism']
     output:
-        join(QUANT_INTERIM, 'aggregate', 'cellranger', 'scanpy', 'cellranger_aggr.h5ad')
+        join(CR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.4'
     shell:
-        'python {params.script} {input} -o {output} -f cellranger_aggr --genome {params.org}'
+        'python {params.script} {input} -o {output} -f cellranger --genome {params.org}'
 

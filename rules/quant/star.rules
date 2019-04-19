@@ -63,9 +63,9 @@ rule star_scanpy:
         script = srcdir('scripts/cellranger_scanpy.py'),
         input = join(STAR_INTERIM, '{sample}', 'Solo.out')
     output:
-        join(STAR_PROCESSED, 'scanpy', '{sample}', '{sample}.h5ad')
+        join(STAR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.3.7'
     shell:
-        'python {params.script} -i {params.input} -o {output} '
+        'python {params.script} {params.input} -f star -o {output} '
  

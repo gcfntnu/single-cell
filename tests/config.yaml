@@ -1,57 +1,11 @@
-filter:
-  skip: false
-cellranger:
-  docker: 'docker://gcfntnu/cellranger:3.0.0'
-  gene_biotype:
-  - protein_coding
-  - lincRNA
-  - antisense
-  - IG_LV_gene
-  - IG_V_gene
-  - IG_V_pseudogene
-  - IG_D_gene
-  - IG_J_gene
-  - IG_J_pseudogene
-  - IG_C_gene
-  - IG_C_pseudogene
-  - TR_V_gene
-  - TR_V_pseudogene
-  - TR_D_gene
-  - TR_J_gene
-  - TR_J_pseudogene
-  - TR_C_gene
-  prebuilds:
-    homo_sapiens: 'http://cf.10xgenomics.com/supp/cell-exp/refdata-cellranger-GRCh38-3.0.0.tar.gz'
-    homo_sapiens__mus_musculus: 'http://cf.10xgenomics.com/supp/cell-exp/refdata-cellranger-hg19-and-mm10-3.0.0.tar.gz'
-    mus_musculus: 'http://cf.10xgenomics.com/supp/cell-exp/refdata-cellranger-mm10-3.0.0.tar.gz'
-ensembl:
-  add_ercc: false
-  assembly: primary_assembly
-  ensembl_release: '92'
-  protocol: http
-  transcriptome_type: all
-ext_dir: data/ext
 fastq_dir: data/raw/cellranger-tiny-fastq/3.0.0/
-gencode:
-  add_ercc: true
-  assembly: primary_assembly
-  gencode_release: '28'
-  protocol: ftp
-  transcriptome_type: pc
-interim_dir: data/tmp
 organism: homo_sapiens
-processed_dir: data/processed
-project: GCF-2018-002
-quant:
-  method: cellranger
-  reference: cellranger-tiny-ref/3.0.0
+ref_dir: data/raw/cellranger-tiny-ref/3.0.0/
 samples:
   tinygex:
-    I1: tinygex_S1_L001_I1_001.fastq.gz 
     R1: tinygex_S1_L001_R1_001.fastq.gz,tinygex_S1_L002_R1_001.fastq.gz
     R2: tinygex_S1_L001_R2_001.fastq.gz,tinygex_S1_L002_R2_001.fastq.gz
-scanpy:
-  genome: GRCh38_chr21
-  docker: 'docker://gcfntnu/scanpy:1.3.4'
-seurat:
-  docker: 'docker://flatberg/seurat:dev-3.0.0'
+
+quant:
+  cellranger:
+    ncells: 4000
