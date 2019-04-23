@@ -203,8 +203,8 @@ if __name__ == '__main__':
     if not args.no_zero_cell_rm:
         keep = data.X.sum(1).A.squeeze() > 0
         data = data[keep,:]
-        #keep = data.X.sum(0).A.squeeze() > 0 
-        keep = (data.X != 0).any(axis=0)
+        keep = data.X.sum(0).A.squeeze() > 0 
+        #keep = (data.X != 0).any(axis=0)
         data = data[:,keep]
         
     if feature_info:
