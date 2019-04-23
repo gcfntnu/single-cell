@@ -1,0 +1,42 @@
+#-*- mode:snakemake -*-
+"""10xgenomics external data and reference/index builds
+
+support.10xgenomics.com/single-cell-gene-expression/software/downloads
+
+"""
+
+from os.path import join
+
+extra_conf_fn = srcdir('cellranger.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config2(config, c)
+
+# config
+ORG = config.get('organism', 'homo_sapiens')
+REF = config['quant']['reference']
+
+rule cellranger_mkref:
+    input:
+         fasta = join(EXT_DIR, REF, 'fasta', 'genome.fa'),
+         gtf = join(EXT_DIR, REF, 'genes', 'genes.gtf')
+    params:
+        out_name = 'GRCh38',
+        out_dir = join(EXT_DIR, REF, 'cellranger')
+    output:
+        join(EXT_DIR, REF, 'cellranger', 'reference.json'),
+        join(EXT_DIR, REF, 'cellranger', 'fasta', 'genome.fa'),
+        join(EXT_DIR, REF, 'cellranger', 'genes', 'genes.gtf')
+    threads:
+        48
+    singularity:
+        'docker://gcfntnu/cellranger:3.0.2'
+    shell:
+        'cellranger mkref '
+        '--fasta {input.fasta} '
+        '--genes {input.gtf} '
+        '--nthreads {threads} '
+        '--genome {params.out_name} '
+        '&& cp -r {params.out_name}/* {params.out_dir}/ '
+        '&& rm -rf {params.out_name} '
