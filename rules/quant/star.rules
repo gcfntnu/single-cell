@@ -59,7 +59,9 @@ rule starsolo_clean_shmem:
     params:
         genome_dir = rules.starsolo_quant.params.genome_dir
     output:
-        temp('.starsolo.mem.cleaned')
+        temp(touch('.starsolo.mem.cleaned'))
+    singularity:
+        STAR_CONF['docker']    
     shell:
         'STAR --genomeDir {params.genome_dir} --genomeLoad Remove || echo "no shared mem"'
 
@@ -74,5 +76,5 @@ rule starsolo_scanpy:
     singularity:
         'docker://gcfntnu/scanpy:1.4'
     shell:
-        'python {params.script} {input} -v -f star -o {output} '
+        'python {params.script} {input.mat} -v -f star -o {output} '
  
