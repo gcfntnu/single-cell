@@ -64,6 +64,11 @@ if os.path.exists(extra_conf_fn):
         # original config will override extra config on shared items
         update_config2(config, c)
 
+libprep_fn = srcdir('libprep.config')
+with open(libprep_fn) as fh:
+    LIBPREP_CONF  = yaml.load(fh) or {}
+kit = config.get('libprepkit', 'default')
+LIBPREP = LIBPREP_CONF[kit]
 
 SAMPLES = config.get('samples', [])
     

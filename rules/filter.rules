@@ -8,7 +8,6 @@ if os.path.exists(extra_conf_fn):
         update_config2(config, c)
 
 FILTER_INTERIM = join(INTERIM_DIR, 'singlecell', 'filter')
-FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 
 def _filter_get_raw_R1(wildcards):
     sscol = config.get('merge', {}).get('sscol', 'Sample_ID')

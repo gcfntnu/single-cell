@@ -48,6 +48,8 @@ rule starsolo_quant:
         '--soloCBwhitelist {input.whitelist} '
         '--readFilesIn {params.R2} {params.R1} '
         '--readFilesCommand zcat '
+        '--outSAMunmapped Within KeepPairs '
+        '--outSAMorder PairedKeepInputOrder '
         '--genomeDir {params.genome_dir} '
         '--outFileNamePrefix {params.outdir} '
         '--runThreadN {threads} '
