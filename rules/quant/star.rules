@@ -55,15 +55,24 @@ rule starsolo_quant:
         '--soloUMIlen {params.umi_len} '
         '--genomeLoad LoadAndKeep '
 
+rule starsolo_clean_shmem:
+    params:
+        genome_dir = rules.starsolo_quant.params.genome_dir
+    output:
+        temp('.starsolo.mem.cleaned')
+    shell:
+        'STAR --genomeDir {params.genome_dir} --genomeLoad Remove || echo "no shared mem"'
+
 rule starsolo_scanpy:
     input:
-        join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx')
+        mat = join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx'),
+        mem_clean = '.starsolo.mem.cleaned'
     params:
         script = srcdir('scripts/cellranger_scanpy.py')
     output:
         join(STAR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.3.7'
+        'docker://gcfntnu/scanpy:1.4'
     shell:
         'python {params.script} {input} -v -f star -o {output} '
  

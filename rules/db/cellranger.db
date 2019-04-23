@@ -15,19 +15,18 @@ if os.path.exists(extra_conf_fn):
 
 # config
 ORG = config.get('organism', 'homo_sapiens')
-REF = config['quant']['reference']
 
 rule cellranger_mkref:
     input:
-         fasta = join(EXT_DIR, REF, 'fasta', 'genome.fa'),
-         gtf = join(EXT_DIR, REF, 'genes', 'genes.gtf')
+         fasta = join(REF_DIR, 'fasta', 'genome.fa'),
+         gtf = join(REF_DIR, 'genes', 'genes.gtf')
     params:
         out_name = 'GRCh38',
-        out_dir = join(EXT_DIR, REF, 'cellranger')
+        out_dir = join(REF_DIR, 'cellranger')
     output:
-        join(EXT_DIR, REF, 'cellranger', 'reference.json'),
-        join(EXT_DIR, REF, 'cellranger', 'fasta', 'genome.fa'),
-        join(EXT_DIR, REF, 'cellranger', 'genes', 'genes.gtf')
+        join(REF_DIR, 'cellranger', 'reference.json'),
+        join(REF_DIR, 'cellranger', 'fasta', 'genome.fa'),
+        join(REF_DIR, 'cellranger', 'genes', 'genes.gtf')
     threads:
         48
     singularity:

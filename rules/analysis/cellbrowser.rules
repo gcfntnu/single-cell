@@ -1,0 +1,25 @@
+
+rule cellbrowser_cellranger:
+    input:
+        rules.cellranger_aggr.output.filt_mtx
+    output:
+        'data/processed/cellbrowser/cellranger/'
+    params:
+        name = config['project_id']
+    singularity:
+        'docker://gcfntnu/cellbrowser:latest'
+    shell:
+        'cbImportCellranger -i {input} -o {output} --name {params.name}'
+
+rule cellbrowser_scanpy:
+    input:
+        rules.cellranger_aggr.output.filt_mtx
+    output:
+        'data/processed/cellbrowser/cellranger/'
+    params:
+        name = config['project_id']
+    singularity:
+        'docker://gcfntnu/cellbrowser:latest'
+    shell:
+        'cbImportCellranger -i {input} -o {output} --name {params.name}'
+
