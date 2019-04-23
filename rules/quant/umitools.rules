@@ -13,9 +13,9 @@ include:
     'cellranger.rules'
     
 #config
+ORG = config.get('organism', 'homo_sapiens')
 UMI_PROCESSED = join(QUANT_PROCESSED, 'umitools')
 UMI_INTERIM= join(QUANT_INTERIM, 'umitools')
-REF = config['quant']['reference']
 
 
 rule umitools_whitelist:
@@ -58,13 +58,13 @@ rule umitools_extract:
 rule umitools_align_star:
     input:
         R2 = rules.umitools_extract.output.R2,
-        ref = join(EXT_DIR, REF, 'star', 'SA')
+        ref = join(REF_DIR, 'star', 'SA')
     output:
         bam = join(UMI_INTERIM, '{sample}', '{sample}.Aligned.sortedByCoord.out.bam')
     singularity:
         'docker://flatberg/star:2.6.1d'
     params:
-        ref = join(EXT_DIR, REF, 'star'),
+        ref = join(REF_DIR, 'star'),
         out_prefix = join(UMI_INTERIM, '{sample}', '{sample}.'),
         args = '--readFilesCommand zcat --outFilterMultimapNmax 1 --outSAMtype BAM SortedByCoordinate '
     threads:
@@ -80,7 +80,7 @@ rule umitools_align_star:
 rule umitools_assign_genes:
     input:
         bam = join(UMI_INTERIM, '{sample}', '{sample}.Aligned.sortedByCoord.out.bam'),
-        gtf = join(EXT_DIR, REF, 'genes', 'genes.gtf')
+        gtf = join(REF_DIR, 'genes', 'genes.gtf')
     singularity:
         'docker://quay.io/biocontainers/subread:1.6.3--ha92aebf_0'
     output:

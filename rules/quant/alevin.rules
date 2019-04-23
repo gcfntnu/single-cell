@@ -7,33 +7,25 @@ if os.path.exists(extra_conf_fn):
         update_config2(config, c)
 
 #config
+ORG = config.get('organism', 'homo_sapiens')
 AVN_INTERIM = join(QUANT_INTERIM, 'alevin')
 AVN_PROCESSED = join(QUANT_PROCESSED, 'alevin')
-REF = config['quant']['reference']
 
-
-rule alevin_10xgenomics_whitelist:
-    input:
-        rules.cellranger_count.output.summary
-    output:
-        join(AVN_INTERIM, 'whitelists', '{sample}', '10x_whitelist.txt')
-    shell:
-        'zcat {input} > {output}'
                      
 rule alevin_quant:
     input:
         R1 = get_filtered_fastq_R1,
         R2 = get_filtered_fastq_R2,
-        ref = join(EXT_DIR, REF, 'salmon', 'refInfo.json'),
-        t2g = join(EXT_DIR, REF, 'genes', 'txp2gene.tsv')
+        ref = join(REF_DIR, 'salmon', 'refInfo.json'),
+        t2g = join(REF_DIR, 'genes', 'txp2gene.tsv')
     params:
         args = '-l ISR --chromiumV3 --dumpCsvCounts',
         output = join(AVN_INTERIM, '{sample}'),
-        ref = join(EXT_DIR, REF, 'salmon')
+        ref = join(REF_DIR, 'salmon')
     threads:
         16
     singularity:
-        'docker://flatberg/alevin:dev0.12'
+        'docker://gcfntnu/alevin:0.13.1'
     output:
         quant = join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.gz'),
         csv = join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.csv')
@@ -47,31 +39,18 @@ rule alevin_quant:
         '-p {threads} '
         '-o {params.output} '
 
-rule alevin_seurat:
-    input:
-        rules.alevin_quant.output.csv
-    params:
-        script = srcdir('scripts/alevin_seurat.R'),
-        input_dir = join(AVN_INTERIM, '{sample}')
-    output:
-        join(AVN_PROCESSED, 'seurat', '{sample}', '{sample}.rds')
-    singularity:
-        'docker://flatberg/seurat:dev-3.0.1'
-    shell:
-        'Rscript {params.script} --input {params.input_dir} --output {output}'
-
 rule alevin_scanpy:
     input:
-        expand(rules.alevin_quant.output.quant, sample=SAMPLES)
+        join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.gz')
     params:
-        script = srcdir('scripts/alevin_scanpy.py')
+        script = srcdir('scripts/cellranger_scanpy.py')
     output:
-        join(AVN_PROCESSED, 'scanpy', 'adata.h5ad')
+        join(AVN_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.4'
     shell:
-        'python {params.script} -i {input} -o {output} '
-
+        'python {params.script} {input} -v -f alevin -o {output} '
+        
 rule alevin_qc:
     input:
         rules.alevin_quant.output
@@ -86,3 +65,16 @@ rule alevin_qc:
         'Rscript {params.script} '
         '--input {params.input_dir} '
         '--output {output}'
+
+rule alevin_seurat:
+    input:
+        rules.alevin_quant.output.csv
+    params:
+        script = srcdir('scripts/alevin_seurat.R'),
+        input_dir = join(AVN_INTERIM, '{sample}')
+    output:
+        join(AVN_PROCESSED, 'seurat', '{sample}', '{sample}.rds')
+    singularity:
+        'docker://flatberg/seurat:dev-3.0.1'
+    shell:
+        'Rscript {params.script} --input {params.input_dir} --output {output}'

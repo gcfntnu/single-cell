@@ -76,7 +76,6 @@ include:
     'rules/filter.rules'
 include:
     'rules/quant.rules'
-
     
 onsuccess:
     # write config

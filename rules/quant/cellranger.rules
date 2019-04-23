@@ -1,6 +1,7 @@
 #-*- mode:snakemake -*-
 
 import os
+import re
 
 extra_conf_fn = srcdir('cellranger.config')
 if os.path.exists(extra_conf_fn):
@@ -10,24 +11,40 @@ if os.path.exists(extra_conf_fn):
 
 #config
 ORG = config.get('organism', 'homo_sapiens')
-FASTQ_DIR = config.get('fastq_dir', 'data/raw/fastq')
 CR_PROCESSED = join(QUANT_PROCESSED, 'cellranger')
 CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
 CR_CONF = config['quant']['cellranger']
-REF = config['quant']['reference']
 
+if not '10xgenomics' in REF_DIR:
+    CR_REF_DIR = join(REF_DIR, 'cellranger')
+else:
+    CR_REF_DIR = REF_DIR
 
-rule cellranger_count:
+def input_fastq_path(wildcards, input):
+    R1 = get_filtered_fastq_R1(wildcards)
+    if config['filter']['skip']:
+        fq_dir = config['fastq_dir']
+    else:
+        fq_dir = join(FILTER_INTERIM, 'fastp_10x')
+    if not fq_dir.endswith(os.path.sep):
+        fq_dir += os.path.sep
+    pths = set()
+    for r1 in R1:
+        pth, bn = os.path.split(r1)
+        pths.add(pth)
+    return ','.join(list(pths))
+    
+rule cellranger_quant_:
     input:
         R1 = get_filtered_fastq_R1,
         R2 = get_filtered_fastq_R2,
-        transcriptome = join(EXT_DIR, REF, 'reference.json')
+        genome = join(CR_REF_DIR, 'fasta', 'genome.fa')
     params:
-        input = rules.fastp_10x.params.out if not config['filter']['skip'] else FASTQ_DIR,
+        input = input_fastq_path,
         id = '{sample}',
         outdir = CR_INTERIM,
         sample = '{sample}',
-        transcriptome = join(EXT_DIR, REF),
+        genome_dir = CR_REF_DIR,
         ncells = config['quant']['cellranger']['ncells']
     threads:
         48
@@ -48,19 +65,19 @@ rule cellranger_count:
         '--fastqs {params.input} '
         '--id {params.id} '
         '--sample {params.sample} '
-        '--transcriptome {params.transcriptome} '
+        '--transcriptome {params.genome_dir} '
         '--expect-cells {params.ncells} '
         '--disable-ui '
         '--localcores {threads} '
 
 rule cellranger_quant:
     input:
-        rules.cellranger_count.output.summary,
-        rules.cellranger_count.output.raw_h5, 
-        rules.cellranger_count.output.filt_h5,
-        rules.cellranger_count.output.mol_h5,
-        rules.cellranger_count.output.raw_mtx, 
-        rules.cellranger_count.output.filt_mtx
+        rules.cellranger_quant_.output.summary,
+        rules.cellranger_quant_.output.raw_h5, 
+        rules.cellranger_quant_.output.filt_h5,
+        rules.cellranger_quant_.output.mol_h5,
+        rules.cellranger_quant_.output.raw_mtx, 
+        rules.cellranger_quant_.output.filt_mtx
     output:
         summary = join(CR_INTERIM, '{sample}', 'outs', 'web_summary.html'),
         raw_h5 = join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
@@ -157,7 +174,7 @@ rule cellranger_scanpy_aggr:
     singularity:
         'docker://gcfntnu/scanpy:1.4'
     shell:
-        'python {params.script} {input} -o {output} -f cellranger --normalize mapped --genome {params.org}'
+        'python {params.script} {input} -o {output} -v -f cellranger_aggr --normalize mapped --genome {params.org}'
 
 rule cellranger_scanpy_convert:
     input:
@@ -170,5 +187,5 @@ rule cellranger_scanpy_convert:
     singularity:
         'docker://gcfntnu/scanpy:1.4'
     shell:
-        'python {params.script} {input} -o {output} -f cellranger --genome {params.org}'
+        'python {params.script} {input} -o {output} -v -f cellranger --genome {params.org}'
 

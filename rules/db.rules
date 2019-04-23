@@ -12,4 +12,15 @@ include:
 include:
     'db/10xgenomics.db'
 include:
+    'db/cellranger.db'    
+include:
     'db/alevin.db'
+
+if 'REF_DIR' in locals():
+    pass
+elif 'ref_dir' in config:
+    REF_DIR = config['ref_dir']
+elif 'reference_db' in config['db']:
+    REF_DIR = join(EXT_DIR, config['db']['reference_db'])
+else:
+    REF_DIR = None

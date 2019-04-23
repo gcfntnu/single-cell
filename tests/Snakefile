@@ -5,10 +5,13 @@ include:
     '../single-cell.sm'
 
 QUANT = ['cellranger', 'star']
+import pprint
+print(SAMPLES)
+pprint.pprint(config)
 
 rule sample_info:
     output:
-        'data/processed/sample_info.txt'
+        join(PROCESSED_DIR, 'sample_info.txt')
     run:
        import pandas as pd
        df = pd.DataFrame.from_dict(config['samples'], orient='index')
@@ -21,4 +24,4 @@ rule test_filter:
 
 rule test_quant:
     input:
-        expand(join('data', 'tmp', 'singlecell', 'quant', '{quant}', '{sample}', 'scanpy/adata.h5ad'), sample=SAMPLES, quant=QUANT)
+        expand(join(INTERIM_DIR, 'singlecell', 'quant', '{quant}', '{sample}', 'scanpy/adata.h5ad'), sample=SAMPLES, quant=QUANT)

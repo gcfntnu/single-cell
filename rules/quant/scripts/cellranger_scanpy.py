@@ -10,6 +10,7 @@ import argparse
 import scanpy  as sc
 import pandas as pd
 import numpy as np
+from vpolo.alevin import parser as alevin_parser
 
 GENOME = {'homo_sapiens': 'GRCh38',
           'human': 'GRCh38',
@@ -34,7 +35,8 @@ parser.add_argument('--filter-org', help='filter data (genes) by organism', defa
 parser.add_argument('--gex-only', help='only keep `Gene Expression` data and ignore other feature types.', default=True)
 parser.add_argument('--normalize', help='normalize depth across the input libraries', default='none', choices=['none', 'mapped'])
 parser.add_argument('--batch', help='column name in `sample-info` with batch covariate', default=None)
-parser.add_argument('--verbose', help='verbose output.', action='store_true')
+parser.add_argument('--no-zero-cell-rm', help='do not remove cells with zero counts', action='store_true')
+parser.add_argument('-v ', '--verbose', help='verbose output.', action='store_true')
 
 
 def downsample_gemgroup(data_list):
@@ -53,7 +55,7 @@ def downsample_gemgroup(data_list):
         sampled_list.append(data)
     return sampled_list
 
-def read_cellranger(fn, args):
+def read_cellranger(fn, args, rm_zero_cells=True, **kw):
     """read cellranger results
 
     Assumes the Sample_ID may be extracted from cellranger output dirname, 
@@ -78,9 +80,10 @@ def read_cellranger(fn, args):
         data.obs_names = barcodes
     data.obs.index.name = 'barcodes'
     data.var.index.name = 'gene_id'
+    
     return data
         
-def read_cellranger_aggr(fn, args):
+def read_cellranger_aggr(fn, args, **kw):
     data = read_cellranger(fn, args)
     dirname = os.path.dirname(fn)
     if not fn.endswith('.h5'):
@@ -96,17 +99,44 @@ def read_cellranger_aggr(fn, args):
         aggr_csv = pd.read_csv(aggr_csv)
         sample_map = dict((i, n) for i,n in enumerate(aggr_csv['library_id']))
         samples = [sample_map[i] for i in barcode_enum]
-        
         data.obs['library_id'] = samples
+  
     return data
 
-def read_star(fn, args):
+def read_star(fn, args, **kw):
+    mtx_dir = os.path.dirname(fn)
+    dirname = os.path.dirname(mtx_dir)
+    data = sc.readwrite._read_legacy_10x_mtx(mtx_dir, var_names='gene_ids', make_unique=True)
+    data.var['gene_ids'] = list(data.var_names)
+    sample_id = os.path.basename(dirname)
+    data.obs['library_id'] = [sample_id] * data.obs.shape[0]
+    barcodes = [b.split('-')[0] for b in data.obs.index]
+    if len(barcodes) == len(set(barcodes)):
+        data.obs_names = barcodes
+    
+    return data
+
+
+def read_alevin(fn, args, **kw):
+    avn_dir = os.path.dirname(fn)
+    dirname = os.path.dirname(avn_dir)
+    if fn.endswith('.gz'):
+        df = alevin_parser.read_quants_bin(input_dir)
+    else:
+        df = alevin_parser.read_quants_csv(input_dir)
+    row = {'row_names': df.index.values.astype(str)}
+    col = {'col_names': np.array(df.columns, dtype=str)}
+    data = AnnData(df.values, row, col, dtype=np.float32)
+    data.var['gene_ids'] = list(data.var_names)
+    sample_id = os.path.basename(dirname)
+    data.obs['library_id'] = [sample_id] * data.obs.shape[0]
+    
+    return data
+    
+def read_umitools(fn, **kw):
     raise NotImplementedError
 
-def read_umitools(fn, args):
-    raise NotImplementedError
-
-READERS = {'cellranger_aggr': read_cellranger_aggr, 'cellranger': read_cellranger, 'star': read_star, 'unitools': read_umitools}
+READERS = {'cellranger_aggr': read_cellranger_aggr, 'cellranger': read_cellranger, 'star': read_star, 'umitools': read_umitools, 'alevin': read_alevin}
         
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -169,6 +199,13 @@ if __name__ == '__main__':
         obs = sample_info.loc[data.obs['library_id'],:]
         obs.index = data.obs.index.copy()
         data.obs = data.obs.merge(obs, how='left', on='barcode', copy=False)
+
+    if not args.no_zero_cell_rm:
+        keep = data.X.sum(1).A.squeeze() > 0
+        data = data[keep,:]
+        #keep = data.X.sum(0).A.squeeze() > 0 
+        keep = (data.X != 0).any(axis=0)
+        data = data[:,keep]
         
     if feature_info:
         data.var = data.var.merge(feature_info, how='left', on='gene_id', copy=False)
@@ -178,6 +215,10 @@ if __name__ == '__main__':
         data.obs['fraction_mito'] = np.sum(data[:, mito_genes].X, axis=1).A1 / np.sum(data.X, axis=1).A1
     data.obs['n_counts'] = data.X.sum(axis=1).A1
 
+    if args.verbose:
+        print(data)
+        print(data.X.A.sum())
+        
     if args.output_format == 'anndata':
         data.write(args.outfile)
     elif args.output_format == 'loom':

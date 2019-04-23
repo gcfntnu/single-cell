@@ -9,3 +9,4 @@ samples:
 quant:
   cellranger:
     ncells: 4000
+  reference: ensembl

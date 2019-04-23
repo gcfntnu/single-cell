@@ -16,29 +16,17 @@ if os.path.exists(extra_conf_fn):
 # config
 ORG = config.get('organism', 'homo_sapiens')
 TX_EXT = join(EXT_DIR, '10xgenomics')
-TX_CONFIG = config.get('10xgenomics', {})
+TX_CONFIG = config['db'].get('10xgenomics', {})
 
 rule txgenomics_whitelist:
     params:
-        #fn = '3M-february-2018.txt',
-        fn = '737K-august-2016.txt',
+        fn = '3M-february-2018.txt',
+        #fn = '737K-august-2016.txt',
         url = TX_CONFIG['whitelist_url']
     output:
         join(TX_EXT, 'whitelist.txt')
     shell:
         'wget -O {output} {params.url}/{params.fn}'
-
-rule old_txgenomics_whitelist:
-    input:
-        url = TX_CONFIG['cellranger_url']
-    params:
-        fn = 'cellranger-3.0.2/cellranger-cs/3.0.2/lib/python/cellranger/barcodes/3M-february-2018.txt.gz'
-    output:
-        join(TX_EXT, 'whitelist.txt')
-    shadow:
-        'shallow'
-    shell:
-        'curl -o cellranger-3.0.2.tar.gz {input.url} && tar --extract --file=cellranger-3.0.2.tar.gz -O {params.fn} | gunzip -c > {output}'
 
 rule txgenomics_org_prebuild:
     params:
