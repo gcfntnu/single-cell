@@ -17,11 +17,11 @@ if os.path.exists(extra_conf_fn):
 ORG = config.get('organism', 'homo_sapiens')
 TX_EXT = join(EXT_DIR, '10xgenomics')
 TX_CONFIG = config['db'].get('10xgenomics', {})
+WHITELIST = '3M-february-2018.txt' if config['libprepkit'].endswith('v3') else '737K-august-2016.txt'
 
 rule txgenomics_whitelist:
     params:
-        fn = '3M-february-2018.txt',
-        #fn = '737K-august-2016.txt',
+        fn = WHITELIST,
         url = TX_CONFIG['whitelist_url']
     output:
         join(TX_EXT, 'whitelist.txt')
@@ -47,7 +47,7 @@ rule txgenomics_transcriptome:
     output:
         join(TX_EXT, 'fasta', 'transcriptome.fa')
     shell:
-        'gffread -w {output} -g {input.genome} {input.gtf}'
+        'gffread -w -G -E {output} -g {input.genome} {input.gtf}'
 
 rule txgenomics_gtf_extract_biotypes:
     input:

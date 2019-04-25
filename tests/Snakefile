@@ -4,7 +4,7 @@ configfile:
 include:
     '../single-cell.sm'
 
-QUANT = ['cellranger', 'star']
+QUANT = ['alevin']
 import pprint
 print(SAMPLES)
 pprint.pprint(config)
@@ -25,3 +25,7 @@ rule test_filter:
 rule test_quant:
     input:
         expand(join(INTERIM_DIR, 'singlecell', 'quant', '{quant}', '{sample}', 'scanpy/adata.h5ad'), sample=SAMPLES, quant=QUANT)
+
+rule test_quant_aggr:
+    input:
+        expand(join(INTERIM_DIR, 'singlecell', 'quant', 'aggregate', '{quant}', 'scanpy', 'scanpy_aggr.h5ad'), quant=QUANT)
