@@ -12,3 +12,6 @@ samples:
 quant:
   cellranger:
     ncells: 4000
+
+db:
+  reference_db: ensembl

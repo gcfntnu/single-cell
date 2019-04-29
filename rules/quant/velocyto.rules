@@ -1,0 +1,48 @@
+#-*- mode:snakemake -*-
+
+extra_conf_fn = srcdir('velocyto.config')
+if os.path.exists(extra_conf_fn):
+    with open(extra_conf_fn) as fh:
+        c  = yaml.load(fh) or {}
+        update_config2(config, c)
+
+#config
+ORG = config.get('organism', 'homo_sapiens')
+VELOCYTO_INTERIM = join(QUANT_INTERIM, 'velocyto')
+VELOCYTO_CONF = config['quant'].get('velocyto', {})
+
+
+include:
+    '../gcfdb/ucsc.db'
+
+rule velocyto_cellranger:
+    input:
+        rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk.gtf'),
+        gtf = join(REF_DIR, 'genes', 'genes.gtf'),
+        h5 = join(QUANT_INTERIM, 'cellranger', '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')
+    params:
+        sample = join(QUANT_INTERIM, 'cellranger', '{sample}')
+    output:
+        join(QUANT_INTERIM, 'cellranger', '{sample}', 'velocyto', '{sample}.loom')
+    singularity:
+        'docker://gcfntnu/velocyto:0.17.17'
+    shell:
+        'velocyto run10x '
+        '-m {input.rep_gtf} '
+        '{params.sample} '
+        '{input.gtf} '
+
+rule velocyto_starsolo:
+    input:
+        rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk.gtf'),
+        gtf = join(REF_DIR, 'genes', 'genes.gtf'),
+        h5 = join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs', 'filtered_feature_bc_matrix.h5')
+    params:
+        sample = join(QUANT_INTERIM, 'aggregate', 'star')
+    output:
+        'star.loom'
+    shell:
+        'velocyto run10x '
+        '-m {input.rep_gtf} '
+        '{params.sample} '
+        '{input.gtf} '

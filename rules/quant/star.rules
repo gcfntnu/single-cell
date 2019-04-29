@@ -19,12 +19,37 @@ def starsolo_R1(wildcards):
 def starsolo_R2(wildcards):
     return ','.join(get_filtered_fastq_R2(wildcards))
 
+
+rule starsolo_genome_index:
+    input: 
+        genome = join(REF_DIR, 'fasta', 'genome.fa'),
+        gtf = join(REF_DIR, 'genes', 'genes.gtf')
+    output:
+         join(REF_DIR, 'star', 'SA')
+    params:
+        index_dir =  join(REF_DIR, 'star'),
+        readlength = config.get('read_geometry', [28, 98])[-1]
+    threads:
+        48
+    log:
+        join(REF_DIR, 'logs', 'STAR.index.log')
+    singularity:
+        STAR_CONF['docker']
+    shell:
+        'STAR '
+        '--runThreadN {threads} '
+        '--runMode genomeGenerate '
+        '--genomeDir {params.index_dir} '
+        '--genomeFastaFiles {input.genome} '
+        '--sjdbGTFfile {input.gtf} '
+        '--sjdbOverhang {params.readlength} '
+
 rule starsolo_quant:
     input:
         R1 = get_filtered_fastq_R1,
         R2 = get_filtered_fastq_R2,
         genome = join(REF_DIR, 'star', 'SA'),
-        whitelist = join(EXT_DIR,'10xgenomics', 'whitelist.txt')
+        whitelist = join(EXT_DIR, '10xgenomics', 'whitelist.txt')
     params:
         outdir = join(STAR_INTERIM, '{sample}') + '/',
         genome_dir = join(REF_DIR, 'star'),
@@ -32,7 +57,7 @@ rule starsolo_quant:
         umi_len = LIBPREP['starsolo']['umi_len'],
         R1 = starsolo_R1,
         R2 = starsolo_R2,
-        extra_args = '--outSAMunmapped Within KeepPairs --outSAMorder PairedKeepInputOrder --genomeLoad LoadAndKeep --readFilesCommand zcat'
+        extra_args = '--genomeLoad LoadAndKeep ' 
     threads:
         48
     output:
@@ -45,8 +70,8 @@ rule starsolo_quant:
     benchmark:
         'benchmark/starsolo/{sample}-starsolo.txt'
     shell:
-        'STAR '
-        '--soloType Droplet '
+        'STAR --soloType Droplet '
+        ' --readFilesCommand zcat '
         '--soloCBwhitelist {input.whitelist} '
         '--readFilesIn {params.R2} {params.R1} '
         '--genomeDir {params.genome_dir} '

@@ -3,8 +3,10 @@ configfile:
 
 include:
     '../single-cell.sm'
+include:
+    '../rules/quant/velocyto.rules'
 
-QUANT = ['alevin']
+QUANT = ['star', 'alevin', 'umitools']
 import pprint
 print(SAMPLES)
 pprint.pprint(config)

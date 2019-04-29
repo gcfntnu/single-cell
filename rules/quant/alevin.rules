@@ -10,13 +10,39 @@ if os.path.exists(extra_conf_fn):
 ORG = config.get('organism', 'homo_sapiens')
 AVN_INTERIM = join(QUANT_INTERIM, 'alevin')
 AVN_PROCESSED = join(QUANT_PROCESSED, 'alevin')
-                     
+
+rule alevin_tx2gene:
+    input:
+        join(REF_DIR, 'genes', 'transcripts.tsv')
+    output:
+        temp('tx2gene.tsv')
+    shell:
+        'cut -f1,10 {input} | sed 1d > {output}'
+
+rule alevin_index:
+    input:
+        transcriptome = join(REF_DIR, 'fasta', 'cdna.transcripts.fa')
+    output:
+        join(REF_DIR, 'salmon', 'refInfo.json')
+    params:
+        out = join(REF_DIR, 'salmon')
+    threads:
+        16
+    singularity:
+        'docker://gcfntnu/alevin:0.13.1'
+    shell:
+        'salmon index '
+        '--perfectHash '
+        '--threads {threads} '
+        '--index {params.out} '
+        '--transcripts {input.transcriptome}'
+        
 rule alevin_quant:
     input:
         R1 = get_filtered_fastq_R1,
         R2 = get_filtered_fastq_R2,
         ref = join(REF_DIR, 'salmon', 'refInfo.json'),
-        t2g = join(REF_DIR, 'genes', 'txp2gene.tsv')
+        t2g = 'tx2gene.tsv'
     params:
         args = '-l ISR --chromiumV3 ',
         output = join(AVN_INTERIM, '{sample}'),

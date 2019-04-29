@@ -11,23 +11,22 @@ if config['db']['reference_db'] == 'ensembl':
 if config['db']['reference_db'] == 'gencode':
     include:
         'gcfdb/gencode.db'
-if config['db']['reference_db'] == '10xgenomics':
-    include:
-        'gcfdb/10xgenomics.db'
+
+include:
+    'gcfdb/10xgenomics.db'
 
 if 'REF_DIR' in locals():
     pass
 elif 'ref_dir' in config:
     REF_DIR = config['ref_dir']
 elif 'reference_db' in config['db']:
-    REF_DIR = join(EXT_DIR, config['db']['reference_db'])
+    _ref = config['db']['reference_db']
+    DB_CONF = config['db'][_ref]
+    REF_DIR = join(EXT_DIR, _ref, config['organism'], DB_CONF['version'])
 else:
     REF_DIR = None
 
 include:
     'gcfdb/convert.rules'
 
-#include:
-#    'db/cellranger.db'
-include:
-    'gcfdb/alevin.db'
+
