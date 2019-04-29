@@ -33,7 +33,43 @@ def input_fastq_path(wildcards, input):
         pth, bn = os.path.split(r1)
         pths.add(pth)
     return ','.join(list(pths))
-    
+
+rule cellranger_gtf:
+    input:
+        gtf = join(REF_DIR, 'genes', 'genes.gtf')
+    output:
+        gtf = join(REF_DIR, 'genes', 'genes.gtf.filtered')
+    params:
+        ' '.join('--attribute=gene_biotype:{}'.format(bt) for bt in CR_CONF['mkfastq']['gene_biotype'])
+    singularity:
+        CR_CONF['docker']
+    shell:
+        'cellranger mkgtf {input} {output} {params}'
+
+rule cellranger_mkref:
+    input:
+         fasta = join(REF_DIR, 'fasta', 'genome.fa'),
+         gtf = join(REF_DIR, 'genes', 'genes.gtf')
+    params:
+        out_name = 'GRCh38',
+        out_dir = join(REF_DIR, 'cellranger')
+    output:
+        join(CR_REF_DIR, 'reference.json'),
+        join(CR_REF_DIR, 'fasta', 'genome.fa'),
+        join(CR_REF_DIR, 'genes', 'genes.gtf')
+    threads:
+        48
+    singularity:
+        CR_CONF['docker']
+    shell:
+        'cellranger mkref '
+        '--fasta {input.fasta} '
+        '--genes {input.gtf} '
+        '--nthreads {threads} '
+        '--genome {params.out_name} '
+        '&& cp -r {params.out_name}/* {params.out_dir}/ '
+        '&& rm -rf {params.out_name} '
+ 
 rule cellranger_quant_:
     input:
         R1 = get_filtered_fastq_R1,

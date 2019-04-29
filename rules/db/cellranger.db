@@ -21,7 +21,7 @@ rule cellranger_mkref:
          fasta = join(REF_DIR, 'fasta', 'genome.fa'),
          gtf = join(REF_DIR, 'genes', 'genes.gtf')
     params:
-        out_name = 'GRCh38',
+        ref_version = config['db'][config['db']['reference_db']]['version'],
         out_dir = join(REF_DIR, 'cellranger')
     output:
         join(REF_DIR, 'cellranger', 'reference.json'),
@@ -36,6 +36,6 @@ rule cellranger_mkref:
         '--fasta {input.fasta} '
         '--genes {input.gtf} '
         '--nthreads {threads} '
-        '--genome {params.out_name} '
-        '&& cp -r {params.out_name}/* {params.out_dir}/ '
-        '&& rm -rf {params.out_name} '
+        '--genome {params.ref_version} '
+        '&& cp -r {params.ref_version}/* {params.out_dir}/ '
+        '&& rm -rf {params.ref_version} '
