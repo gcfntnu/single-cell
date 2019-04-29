@@ -24,38 +24,37 @@ rule starsolo_quant:
         R1 = get_filtered_fastq_R1,
         R2 = get_filtered_fastq_R2,
         genome = join(REF_DIR, 'star', 'SA'),
-        whitelist = rules.txgenomics_whitelist.output
+        whitelist = join(EXT_DIR,'10xgenomics', 'whitelist.txt')
     params:
         outdir = join(STAR_INTERIM, '{sample}') + '/',
         genome_dir = join(REF_DIR, 'star'),
-        cb_len = STAR_CONF['cb_len'],
-        umi_len = STAR_CONF['umi_len'],
+        cb_len = LIBPREP['starsolo']['cb_len'],
+        umi_len = LIBPREP['starsolo']['umi_len'],
         R1 = starsolo_R1,
-        R2 = starsolo_R2
+        R2 = starsolo_R2,
+        extra_args = '--outSAMunmapped Within KeepPairs --outSAMorder PairedKeepInputOrder --genomeLoad LoadAndKeep --readFilesCommand zcat'
     threads:
         48
     output:
         barcodes = join(STAR_INTERIM, '{sample}', 'Solo.out', 'barcodes.tsv'),
         gene_stats = join(STAR_INTERIM, '{sample}', 'Solo.out', 'Gene.stats'),
         genes = join(STAR_INTERIM, '{sample}', 'Solo.out', 'genes.tsv'),
-        feature_mtx = join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx'),
+        feature_mtx = join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx')
     singularity:
         STAR_CONF['docker']
     benchmark:
         'benchmark/starsolo/{sample}-starsolo.txt'
     shell:
-        'STAR --soloType Droplet '
+        'STAR '
+        '--soloType Droplet '
         '--soloCBwhitelist {input.whitelist} '
         '--readFilesIn {params.R2} {params.R1} '
-        '--readFilesCommand zcat '
-        '--outSAMunmapped Within KeepPairs '
-        '--outSAMorder PairedKeepInputOrder '
         '--genomeDir {params.genome_dir} '
         '--outFileNamePrefix {params.outdir} '
-        '--runThreadN {threads} '
         '--soloCBlen {params.cb_len} '
         '--soloUMIlen {params.umi_len} '
-        '--genomeLoad LoadAndKeep '
+        '--runThreadN {threads} '
+        '{params.extra_args} '
 
 rule starsolo_clean_shmem:
     params:
@@ -67,7 +66,7 @@ rule starsolo_clean_shmem:
     shell:
         'STAR --genomeDir {params.genome_dir} --genomeLoad Remove || echo "no shared mem"'
 
-rule starsolo_scanpy:
+rule starsolo_scanpy_convert:
     input:
         mat = join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx'),
         mem_clean = '.starsolo.mem.cleaned'
@@ -78,5 +77,23 @@ rule starsolo_scanpy:
     singularity:
         'docker://gcfntnu/scanpy:1.4'
     shell:
-        'python {params.script} {input.mat} -v -f star -o {output} '
+        'python {params.script} {input.mat} -f star -o {output} -v '
  
+rule starsolo_scanpy_aggr:
+    input:
+        mat = expand(rules.starsolo_quant.output.feature_mtx, sample=SAMPLES),
+        mem_clean = '.starsolo.mem.cleaned'
+    params:
+        script = srcdir('scripts/cellranger_scanpy.py'),
+        norm = config['quant']['aggregate']['norm']
+    output:
+        join(QUANT_INTERIM, 'aggregate', 'star', 'scanpy', 'scanpy_aggr.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.4'
+    shell:
+        'python {params.script} '
+        '{input} '
+        '-o {output} '
+        '-f star '
+        '--normalize {params.norm} '
+        '-v '       

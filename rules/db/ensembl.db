@@ -154,7 +154,7 @@ rule ensembl_db_downloads:
         gtf = rules.ensembl_add_ercc2gtf.output if ERCC else rules.ensembl_gtf.output,
     output:
         genome = join(ENSEMBL_EXT, 'fasta', 'genome.fa'),
-        cdna = join(ENSEMBL_EXT, 'fasta', 'transcriptome.fa'),
+        cdna = join(ENSEMBL_EXT, 'fasta', 'cdna.fa'),
         gtf = join(ENSEMBL_EXT, 'genes', 'genes.gtf'),
         noncoding = join(ENSEMBL_EXT, 'fasta', 'ncdna.fa')
     shell:

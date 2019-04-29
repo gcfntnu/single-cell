@@ -3,14 +3,6 @@ AVN_EXT = join(EXT_DIR, 'alevin')
 AVN_CONFIG = config.get('alevin', {})
 AVN_DOCKER = AVN_CONFIG.get('docker', 'docker://flatberg/alevin:dev0.12')
 
-include:
-    'ensembl.db'
-include:
-    'gencode.db'
-include:
-    '10xgenomics.db'
-
-
 rule alevin_transcriptome:
     input:
         gtf = join(EXT_DIR, '{reference_db}', 'genes', 'genes.gtf'),
@@ -20,7 +12,7 @@ rule alevin_transcriptome:
     singularity:
         'docker://gcfntnu/alevin:0.13.1'
     shell:
-        'gffread -w {output} -g {input.genome} {input.gtf}'
+        'gffread -w {output} -G -E -g {input.genome} {input.gtf}'
         
 rule alevin_index:
     input:
@@ -39,15 +31,23 @@ rule alevin_index:
         '--threads {threads} '
         '--index {params.out} '
         '--transcripts {input.transcriptome}'
+
+rule ensembl_tx_csv:
+    input:
+       gtf = join(EXT_DIR, '{reference_db}', 'genes', 'genes.gtf')
+    output:
+        join(EXT_DIR, '{reference_db}', 'genes', 'transcripts.tsv')
+    params:
+        script = srcdir('scripts/gtf2tx.py')
+    singularity:
+        'docker://gcfntnu/alevin:0.13.1'
+    shell:
+        'python {params.script} {input} > {output}'
         
 rule alevin_tgmap:
     input:
-        gtf = join(EXT_DIR, '{reference_db}', 'genes', 'genes.gtf')
+        gtf = join(EXT_DIR, '{reference_db}', 'genes', 'transcripts.tsv')
     output:
         join(EXT_DIR, '{reference_db}', 'genes', 'txp2gene.tsv')
     shell:
-        """
-        awk 'BEGIN{{FS="\\t"; OFS="\\t"}} {{ $3="transcript"; print $9}}' data/ext/ensembl/genes/genes.gtf | awk -F ' ' '{{print substr($6,2,length($6)-3)"."substr($4,2, length($4)-3)"\\t" substr($2,2,length($2)-3)}}' > {output}
-
-        """
-1
+        'cut -f1,10  {input} > {output} '

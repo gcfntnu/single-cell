@@ -45,7 +45,9 @@ rule cellranger_quant_:
         outdir = CR_INTERIM,
         sample = '{sample}',
         genome_dir = CR_REF_DIR,
-        ncells = config['quant']['cellranger']['ncells']
+        ncells = config['quant']['cellranger']['ncells'],
+        chemistry = LIBPREP['cellranger']['chemistry'],
+        extra_args = '--nopreflight --disable-ui '
     threads:
         48
     output:
@@ -62,14 +64,16 @@ rule cellranger_quant_:
     shell:
         'rm -rf {params.id} && '
         'cellranger count '
+        '--localcores {threads} '
         '--fastqs {params.input} '
         '--id {params.id} '
         '--sample {params.sample} '
         '--transcriptome {params.genome_dir} '
         '--expect-cells {params.ncells} '
-        '--disable-ui '
-        '--chemistry SC3Pv3 '
         '--localcores {threads} '
+        '--chemistry {params.chemistry} '
+        '{params.extra_args} '
+
 
 rule cellranger_quant:
     input:
@@ -103,7 +107,7 @@ rule cellranger_aggr_csv:
         csv = join(CR_INTERIM, 'aggr.csv')
     run:
         import pandas as pd
-        batch = CR_CONF['aggregate'].get('batch')
+        batch = config['quant']['aggregate'].get('batch')
         df = pd.read_csv(input.sample_info, sep='\t')
         df.index = df['Sample_ID']
         valid_samples = list(df['Sample_ID'])
@@ -135,7 +139,7 @@ rule cellranger_aggr:
     params:
         outdir = join(QUANT_INTERIM, 'aggregate'),
         id = 'cellranger',
-        norm = CR_CONF['aggregate'].get('norm', 'none')
+        norm = config['quant']['aggregate'].get('norm', 'none')
     threads:
         48
     singularity:
@@ -174,8 +178,28 @@ rule cellranger_scanpy_aggr:
     singularity:
         'docker://gcfntnu/scanpy:1.4'
     shell:
-        'python {params.script} {input} -o {output} -v -f cellranger_aggr --normalize mapped --genome {params.org}'
+        'python {params.script} {input} -o {output} -v -f cellranger --normalize mapped --genome {params.org}'
 
+rule cellranger_aggr_scanpy:
+    input:
+        rules.cellranger_aggr.output.filt_h5
+    params:
+        script = srcdir('scripts/cellranger_scanpy.py'),
+        org = config['organism'],
+        norm = config['quant']['aggregate']['norm']
+    output:
+        join(QUANT_INTERIM, 'aggregate', 'cellranger', 'scanpy', 'cellranger_aggr.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.4'
+    shell:
+        'python {params.script} '
+        '{input} '
+        '-o {output} '
+        '-f cellranger_aggr '
+        '--genome {params.org} '
+        '--normalize {params.norm} '
+        '-v '
+        
 rule cellranger_scanpy_convert:
     input:
         join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')
