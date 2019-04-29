@@ -68,7 +68,6 @@ rule cellranger_quant_:
         '--transcriptome {params.genome_dir} '
         '--expect-cells {params.ncells} '
         '--disable-ui '
-        '--nosecondary '
         '--chemistry SC3Pv3 '
         '--localcores {threads} '
 
@@ -147,7 +146,6 @@ rule cellranger_aggr:
         '--id {params.id} '
         '--normalize={params.norm} '
         '--disable-ui '
-        '--nosecondary '
         '--nopreflight '
         '--localcores={threads} && '
         'cp -r {params.id} {params.outdir}/ && '
