@@ -106,7 +106,6 @@ rule cellranger_quant_:
         '--sample {params.sample} '
         '--transcriptome {params.genome_dir} '
         '--expect-cells {params.ncells} '
-        '--localcores {threads} '
         '--chemistry {params.chemistry} '
         '{params.extra_args} '
 
@@ -139,29 +138,43 @@ rule cellranger_aggr_csv:
     input:
         sample_info = 'data/processed/sample_info.txt',
         mol_h5 = expand(rules.cellranger_quant.output.mol_h5, sample=SAMPLES)
+    params:
+        outdir = CR_INTERIM
     output:
         csv = join(CR_INTERIM, 'aggr.csv')
     run:
         import pandas as pd
-        batch = config['quant']['aggregate'].get('batch')
+        batch = config['quant'].get('batch')
+        split = config['quant']['aggregate'].get('groupby')
         df = pd.read_csv(input.sample_info, sep='\t')
         df.index = df['Sample_ID']
-        valid_samples = list(df['Sample_ID'])
-        with open(output.csv, 'w') as aggr:
-            if batch is not None:
-                assert(batch in df.columns)
-                aggr.write('library_id,molecule_h5,batch\n')
+        if split is not None:
+            gr = df.groupby(split)
+            aggr_names = list(gr.groups.keys())
+        else:
+            aggr_names = ['all']
+
+        for aname in aggr_names:
+            if not aname == 'all':
+                valid_samples = list(gr.groups[aname].index)
             else:
-                aggr.write('library_id,molecule_h5\n')
-            for mol_h5 in input.mol_h5:
-                sample = mol_h5.split(os.path.sep)[-3]
-                if sample in valid_samples:
-                    if batch is not None:
-                        aggr.write('{},{},{}\n'.format(sample, mol_h5, df.loc[sample][batch]))
-                    else:
-                        aggr.write('{},{}\n'.format(sample, mol_h5)) 
+                valid_samples = list(df.index)
+            
+            with open(output.csv, 'w') as aggr:
+                if batch is not None:
+                    assert(batch in df.columns)
+                    aggr.write('library_id,molecule_h5,batch\n')
                 else:
-                    logger.error('{} not in {}'.format(sample, str(valid_samples)))
+                    aggr.write('library_id,molecule_h5\n')
+                for mol_h5 in input.mol_h5:
+                    sample = mol_h5.split(os.path.sep)[-3]
+                    if sample in valid_samples:
+                        if batch is not None:
+                            aggr.write('{},{},{}\n'.format(sample, mol_h5, df.loc[sample][batch]))
+                        else:
+                            aggr.write('{},{}\n'.format(sample, mol_h5)) 
+                    else:
+                        logger.error('{} not in {}'.format(sample, str(valid_samples)))
 
 rule cellranger_aggr:
     input:
