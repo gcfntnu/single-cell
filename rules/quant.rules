@@ -17,3 +17,35 @@ include:
     'quant/umitools.rules'
 include:
     'quant/star.rules'
+    
+QRULES = {'cellranger': rules.cellranger_quant.output,
+          'starsolo': rules.starsolo_quant.output,
+          'umitools': rules.umitools_quant.output,
+          'alevin': rules.alevin_quant.output}
+    
+def get_quant():
+    method = config['quant'].get('method', 'cellranger')
+    if config['quant']['aggregate']['skip']:
+        quant_rules = QRULES['method']
+        files = expand(quant_rule, samle=SAMPLES)
+    else:
+        aggr_method = config['quant']['aggregate'].get('method', 'cellranger')
+        assert(aggr_method in ['cellranger', 'scanpy'])
+        AGGR_IDS = glob_wildcards(join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv'))
+        if aggr_method == 'cellranger':
+            assert(method == aggr_method)
+            files = expand(rules.cellranger_aggr.output, aggr_id=AGRR_IDS)
+        else:
+            for aggr_id in AGGR_IDS:
+                aggr_csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
+                with open(aggr_csv) as fh:
+                    txt = fh.read().splitlines()
+                    header = txt.pop(0)
+                    for line in txt:
+                        sample_id, filename =  line.split(',')
+                        
+            files = expand(quant_rule, samle=SAMPLES)
+    return files
+
+            
+                

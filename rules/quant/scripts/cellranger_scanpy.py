@@ -80,25 +80,29 @@ def read_cellranger(fn, args, rm_zero_cells=True, **kw):
         data.obs_names = barcodes
     data.obs.index.name = 'barcodes'
     data.var.index.name = 'gene_id'
-    
     return data
         
 def read_cellranger_aggr(fn, args, **kw):
     data = read_cellranger(fn, args)
+    if 'library_id' in data.obs:
+        data.obs.rename(index=str, columns={'library_id': 'group'}, inplace=True)
     dirname = os.path.dirname(fn)
     if not fn.endswith('.h5'):
         dirname = os.path.dirname(dirname)
 
     # fix cellranger aggr enumeration to start at 0 (matches scanpy enum)
     barcodes =  [i[0] for i in data.obs.index.str.split('-')]
-    barcode_enum = [int(i[1])-1 for i in data.obs.index.str.split('-')]
+    if any(data.obs.index.str.contains('-')):
+        barcodes_enum = [str(int(i[1])-1) for i in data.obs.index.str.split('-')]
+    else:
+        barcodes_enum = ['0'] * len(barcodes)
     data.obs_names = ['-'.join(e) for e in zip(barcodes, barcodes_enum)]
 
     aggr_csv = os.path.join(dirname, 'aggregation.csv')
     if os.path.exists(aggr_csv):
         aggr_csv = pd.read_csv(aggr_csv)
-        sample_map = dict((i, n) for i,n in enumerate(aggr_csv['library_id']))
-        samples = [sample_map[i] for i in barcode_enum]
+        sample_map = dict((str(i), n) for i,n in enumerate(aggr_csv['library_id']))
+        samples = [sample_map[i] for i in barcodes_enum]
         data.obs['library_id'] = samples
   
     return data
@@ -186,11 +190,12 @@ if __name__ == '__main__':
     data = data_list.pop(0)
     if len(data_list) > 0:
         data = data.concatenate(*data_list, batch_categories=batch_categories)
-    # clean up feature info (assumes inner join)
-    # fixme: maybe outer join support is what we want ?
-    keep = [i for i in data.var.columns if i.endswith('-0')]
-    data.var  = data.var.loc[:,keep]
-    data.var.columns = [i.split('-')[0] for i in data.var.columns]
+        # clean up feature info (assumes inner join)
+        # fixme: maybe outer join support is what we want ?
+        if any(i.endswith('-0') for i in data.var.columns):
+            keep = [i for i in data.var.columns if i.endswith('-0')]
+            data.var  = data.var.loc[:,keep]
+            data.var.columns = [i.split('-')[0] for i in data.var.columns]
     if sample_info:
         lib_ids = set(data.obs['library_id'])
         for l in lib_ids:
@@ -211,7 +216,7 @@ if __name__ == '__main__':
         data.var = data.var.merge(feature_info, how='left', on='gene_id', copy=False)
         
     if 'gene_symbols' in data.var.columns:
-        mito_genes = data.var.gene_symbols.str.startswith('MT-')
+        mito_genes = data.var.gene_symbols.str.lower().str.startswith('mt-')
         data.obs['fraction_mito'] = np.sum(data[:, mito_genes].X, axis=1).A1 / np.sum(data.X, axis=1).A1
     data.obs['n_counts'] = data.X.sum(axis=1).A1
 

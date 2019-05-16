@@ -41,8 +41,11 @@ rule velocyto_starsolo:
         sample = join(QUANT_INTERIM, 'aggregate', 'star')
     output:
         'star.loom'
+    singularity:
+        'docker://gcfntnu/velocyto:0.17.17'
     shell:
         'velocyto run10x '
         '-m {input.rep_gtf} '
         '{params.sample} '
         '{input.gtf} '
+
