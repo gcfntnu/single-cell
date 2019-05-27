@@ -30,7 +30,6 @@ parser.add_argument('-f', '--input-format', choices=['cellranger_aggr', 'cellran
 parser.add_argument('-F', '--output-format', choices=['anndata', 'loom', 'csvs'], default='anndata', help='output file format')
 parser.add_argument('--sample-info', help='samplesheet info, tab seprated file assumes `Sample_ID` in header', default=None)
 parser.add_argument('--feature-info', help='extra feature info filename, tab seprated file assumes `gene_id` in header', default=None)
-parser.add_argument('--genome', help='reference genome', default=None)
 parser.add_argument('--filter-org', help='filter data (genes) by organism', default=None)
 parser.add_argument('--gex-only', help='only keep `Gene Expression` data and ignore other feature types.', default=True)
 parser.add_argument('--normalize', help='normalize depth across the input libraries', default='none', choices=['none', 'mapped'])
@@ -62,17 +61,16 @@ def read_cellranger(fn, args, rm_zero_cells=True, **kw):
     e.g ` ... /Sample_ID/outs/filtered_feature_bc_matrix.h5 `
     """
     if fn.endswith('.h5'):
-        if not args.genome:
-            raise ValueError('loading a .h5 file in scanpy requires the `genome` parameter')
         dirname = os.path.dirname(fn)
-        data = sc.read_10x_h5(fn, genome=GENOME[args.genome])
+        data = sc.read_10x_h5(fn)
         data.var['gene_symbols'] = list(data.var_names)
         data.var_names = list(data.var['gene_ids'])
     else:
         mtx_dir = os.path.dirname(fn)
         dirname = os.path.dirname(mtx_dir)
-        data = sc.read_10x_mtx(mtx_dir, gex_only=args.gex_only, var_names='gene_ids', make_unique=True)
+        data = sc.read_10x_mtx(mtx_dir, gex_only=args.gex_only, var_names='gene_ids')
         data.var['gene_ids'] = list(data.var_names)
+    
     sample_id = os.path.basename(os.path.dirname(dirname))
     data.obs['library_id'] = [sample_id] * data.obs.shape[0]
     barcodes = [b.split('-')[0] for b in data.obs.index]
@@ -99,18 +97,17 @@ def read_cellranger_aggr(fn, args, **kw):
     data.obs_names = ['-'.join(e) for e in zip(barcodes, barcodes_enum)]
 
     aggr_csv = os.path.join(dirname, 'aggregation.csv')
-    if os.path.exists(aggr_csv):
-        aggr_csv = pd.read_csv(aggr_csv)
-        sample_map = dict((str(i), n) for i,n in enumerate(aggr_csv['library_id']))
-        samples = [sample_map[i] for i in barcodes_enum]
-        data.obs['library_id'] = samples
+    aggr_csv = pd.read_csv(aggr_csv)
+    sample_map = dict((str(i), n) for i,n in enumerate(aggr_csv['library_id']))
+    samples = [sample_map[i] for i in barcodes_enum]
+    data.obs['library_id'] = samples
   
     return data
 
 def read_star(fn, args, **kw):
     mtx_dir = os.path.dirname(fn)
     dirname = os.path.dirname(mtx_dir)
-    data = sc.readwrite._read_legacy_10x_mtx(mtx_dir, var_names='gene_ids', make_unique=True)
+    data = sc.readwrite._read_legacy_10x_mtx(mtx_dir, var_names='gene_ids')
     data.var['gene_ids'] = list(data.var_names)
     sample_id = os.path.basename(dirname)
     data.obs['library_id'] = [sample_id] * data.obs.shape[0]

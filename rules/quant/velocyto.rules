@@ -31,21 +31,3 @@ rule velocyto_cellranger:
         '-m {input.rep_gtf} '
         '{params.sample} '
         '{input.gtf} '
-
-rule velocyto_starsolo:
-    input:
-        rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk.gtf'),
-        gtf = join(REF_DIR, 'genes', 'genes.gtf'),
-        h5 = join(QUANT_INTERIM, 'aggregate', 'cellranger', 'outs', 'filtered_feature_bc_matrix.h5')
-    params:
-        sample = join(QUANT_INTERIM, 'aggregate', 'star')
-    output:
-        'star.loom'
-    singularity:
-        'docker://gcfntnu/velocyto:0.17.17'
-    shell:
-        'velocyto run10x '
-        '-m {input.rep_gtf} '
-        '{params.sample} '
-        '{input.gtf} '
-

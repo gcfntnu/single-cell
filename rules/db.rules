@@ -20,9 +20,20 @@ if 'REF_DIR' in locals():
 elif 'ref_dir' in config:
     REF_DIR = config['ref_dir']
 elif 'reference_db' in config['db']:
-    _ref = config['db']['reference_db']
-    DB_CONF = config['db'][_ref]
-    REF_DIR = join(EXT_DIR, _ref, config['organism'], DB_CONF['version'])
+    ref = config['db']['reference_db']
+    DB_CONF = config['db'][ref]
+    ORG = config['organism']
+    if '__' in ORG:
+        # multi-species
+        try:
+            # prebuilds
+            REF_DIR =  join(EXT_DIR, ref, ORG, DB_CONF['version'][ORG])
+        except:
+            REF_DIR = []
+            for org in ORG.split('__'):
+                REF_DIR.append(join(EXT_DIR, ref, org, DB_CONF['version'][org]))
+    else:
+        REF_DIR = join(EXT_DIR, ref, ORG, DB_CONF['version'][ORG])
 else:
     REF_DIR = None
 
