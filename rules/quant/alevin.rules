@@ -36,15 +36,57 @@ rule alevin_index:
         '--threads {threads} '
         '--index {params.out} '
         '--transcripts {input.transcriptome}'
+
+rule alevin_1pass:
+    input:
+        R1 = get_filtered_fastq_R1,
+        R2 = get_filtered_fastq_R2,
+        ref = join(REF_DIR, 'salmon', 'refInfo.json'),
+        t2g = 'tx2gene.tsv'   
+    threads:
+        16
+    params:
+        args = '--dumpFeatures --noQuant -l ISR ' + '--{} '.format(LIBPREP['alevin']['chemistry']),
+        out = join(AVN_INTERIM, '1pass', '{sample}'),
+        ref = join(REF_DIR, 'salmon')
+    output:
+        join(AVN_INTERIM, '1pass', '{sample}', 'alevin', 'raw_cb_frequency.txt')
+    shell:
+        'salmon alevin '
+        '{params.args} '
+        '-i {params.ref} '
+        '--tgMap {input.t2g} '
+        '-1 {input.R1} '
+        '-2 {input.R2} '
+        '-p {threads} '
+        '-o {params.out}'
+
+rule alevin_mito_genes:
+    input:
+        join(REF_DIR, 'genes', 'genes.tsv')
+    output:
+        join(AVN_INTERIM, 'mito_genes.tsv')
+    shell:
+        """cut -f1,12 {input} | sed 1d | grep -i  "mt-" | cut -f1 > {output}"""
+
+rule alevin_rrna_genes:
+    input:
+        join(REF_DIR, 'genes', 'genes.tsv')
+    output:
+        join(AVN_INTERIM, 'rrna_genes.tsv')
+    shell:
+        'cut -f1,14 {input} | sed 1d | grep rRNA | cut -f1 | uniq > {output}'
         
 rule alevin_quant:
     input:
         R1 = get_filtered_fastq_R1,
         R2 = get_filtered_fastq_R2,
+        mrna = rules.alevin_mito_genes.output,
+        rrna = rules.alevin_rrna_genes.output,
         ref = join(REF_DIR, 'salmon', 'refInfo.json'),
         t2g = 'tx2gene.tsv'
     params:
-        args = '-l ISR --chromiumV3 ',
+        args = '-l ISR --dumpCsvCounts --dumpFeatures ' + '--{} '.format(LIBPREP['alevin']['chemistry']),
         output = join(AVN_INTERIM, '{sample}'),
         ref = join(REF_DIR, 'salmon')
     threads:
@@ -59,7 +101,8 @@ rule alevin_quant:
         '{params.args} '
         '-i {params.ref} '
         '--tgMap {input.t2g} '
-        '--forceCells 5000 '
+        '--mrna {input.mrna} '
+        '--rrna {input.rrna} '
         '-1 {input.R1} '
         '-2 {input.R2} '
         '-p {threads} '
@@ -73,7 +116,7 @@ rule alevin_scanpy_convert:
     output:
         join(AVN_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4'
+        'docker://gcfntnu/scanpy:1.4.3'
     shell:
         'python {params.script} {input} -v -f alevin -o {output} '
 
@@ -86,7 +129,7 @@ rule alevin_scanpy_aggr:
     output:
         join(QUANT_INTERIM, 'aggregate', 'alevin', 'scanpy', 'scanpy_aggr.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4'
+        'docker://gcfntnu/scanpy:1.4.3'
     shell:
         'python {params.script} '
         '{input.mat} '
@@ -119,6 +162,6 @@ rule alevin_seurat:
     output:
         join(AVN_PROCESSED, 'seurat', '{sample}', '{sample}.rds')
     singularity:
-        'docker://flatberg/seurat:dev-3.0.1'
+        'docker://gcfntnu/seurat:dev-3.0.1'
     shell:
         'Rscript {params.script} --input {params.input_dir} --output {output}'

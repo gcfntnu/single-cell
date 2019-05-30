@@ -190,7 +190,7 @@ rule cellranger_aggr_scanpy:
     output:
         join(QUANT_INTERIM, 'aggregate', 'cellranger', 'scanpy', '{aggr_id}_aggr.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4'
+        'docker://gcfntnu/scanpy:1.4.3'
     shell:
         'python {params.script} '
         '{input} '
@@ -217,7 +217,7 @@ rule cellranger_scanpy_convert:
     output:
         join(CR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4'
+        'docker://gcfntnu/scanpy:1.4.3'
     shell:
         'python {params.script} {input} -o {output} -v -f cellranger'
 
@@ -227,11 +227,11 @@ rule cellranger_seurat_aggr:
     params:
         script = srcdir('scripts/cellranger_seurat.R')
     output:
-        join(CR_PROCESSED, 'seurat', '{sample}', '{sample}.rds')
+        join(QUANT_INTERIM, 'seurat', '{sample}', '{sample}.loom')
     singularity:
-        'docker://flatberg/seurat:dev-3.0.1'
+        'docker://gcfntnu/seurat:dev-3.0.1'
     shell:
-        'Rscript {params.script} --input {input} --output {output}'
+        'Rscript {params.script} --input {input} --format loom --output {output}'
 
 
             
