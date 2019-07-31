@@ -10,6 +10,7 @@ import argparse
 import scanpy  as sc
 import pandas as pd
 import numpy as np
+import anndata
 from vpolo.alevin import parser as alevin_parser
 
 GENOME = {'homo_sapiens': 'GRCh38',
@@ -155,12 +156,12 @@ def read_alevin(fn, args, **kw):
     avn_dir = os.path.dirname(fn)
     dirname = os.path.dirname(avn_dir)
     if fn.endswith('.gz'):
-        df = alevin_parser.read_quants_bin(input_dir)
+        df = alevin_parser.read_quants_bin(dirname)
     else:
-        df = alevin_parser.read_quants_csv(input_dir)
+        df = alevin_parser.read_quants_csv(avn_dir)
     row = {'row_names': df.index.values.astype(str)}
     col = {'col_names': np.array(df.columns, dtype=str)}
-    data = AnnData(df.values, row, col, dtype=np.float32)
+    data = anndata.AnnData(df.values, row, col, dtype=np.float32)
     data.var['gene_ids'] = list(data.var_names)
     sample_id = os.path.basename(dirname)
     data.obs['library_id'] = [sample_id] * data.obs.shape[0]
@@ -232,10 +233,15 @@ if __name__ == '__main__':
         data.obs = data.obs.merge(obs, how='left', left_index=True, right_index=True, suffixes=('', '_sample_info'), validate=True)
 
     if not args.no_zero_cell_rm:
-        keep = data.X.sum(1).A.squeeze() > 0
+        row_sum = data.X.sum(1)
+        if hasattr(row_sum, 'A'):
+            row_sum = row_sum.A.squeeze()
+        keep = row_sum > 0
         data = data[keep,:]
-        keep = data.X.sum(0).A.squeeze() > 0 
-        #keep = (data.X != 0).any(axis=0)
+        col_sum = data.X.sum(0)
+        if hasattr(col_sum, 'A'):
+            col_sum = col_sum.A.squeeze()
+        keep = col_sum > 0
         data = data[:,keep]
         
     if feature_info:
@@ -243,12 +249,17 @@ if __name__ == '__main__':
         
     if 'gene_symbols' in data.var.columns:
         mito_genes = data.var.gene_symbols.str.lower().str.startswith('mt-')
-        data.obs['fraction_mito'] = np.sum(data[:, mito_genes].X, axis=1).A1 / np.sum(data.X, axis=1).A1
-    data.obs['n_counts'] = data.X.sum(axis=1).A1
-
+        try:
+            data.obs['fraction_mito'] = np.sum(data[:, mito_genes].X, axis=1).A1 / np.sum(data.X, axis=1).A1
+        except:
+            data.obs['fraction_mito'] = np.sum(data[:, mito_genes].X, axis=1) / np.sum(data.X, axis=1)
+    try:
+        data.obs['n_counts'] = data.X.sum(axis=1).A1
+    except:
+        data.obs['n_counts'] = data.X.sum(axis=1)
+        
     if args.verbose:
         print(data)
-        print(data.X.A.sum())
         
     if args.output_format == 'anndata':
         data.write(args.outfile)
