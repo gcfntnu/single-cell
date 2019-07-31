@@ -14,8 +14,29 @@ VELOCYTO_CONF = config['quant'].get('velocyto', {})
 
 include:
     '../gcfdb/ucsc.db'
+include:
+    'cellranger.rules'
 
-rule velocyto_cellranger:
+rule velocyto_cellranger_aggr:
+    input:
+        rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk.gtf'),
+        gtf = join(REF_DIR, 'genes', 'genes.gtf'),
+        h5 = join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}', 'outs', 'filtered_feature_bc_matrix.h5')
+    params:
+        sample = join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}')
+    output:
+        join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}', 'velocyto', '{aggr_id}.loom__')
+    singularity:
+        'docker://gcfntnu/velocyto:0.17.17'
+    shell:
+        'velocyto run10x '
+        '--samtools-threads 8 '
+        '--verbose '
+        '-m {input.rep_gtf} '
+        '{params.sample} '
+        '{input.gtf} '
+
+rule velocyto_cellranger_sample:
     input:
         rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk.gtf'),
         gtf = join(REF_DIR, 'genes', 'genes.gtf'),
@@ -28,6 +49,14 @@ rule velocyto_cellranger:
         'docker://gcfntnu/velocyto:0.17.17'
     shell:
         'velocyto run10x '
+        '--samtools-threads 8 '
+        '--verbose '
         '-m {input.rep_gtf} '
         '{params.sample} '
         '{input.gtf} '
+
+rule velocyto_loom_aggr:
+    input:
+        join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
+    output:
+        join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}', 'velocyto', '{aggr_id}.loom')

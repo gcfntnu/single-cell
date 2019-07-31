@@ -180,6 +180,21 @@ rule cellranger_aggr:
         'cp -r {params.id} {params.outdir}/ && '
         'rm -rf {params.id} '
 
+rule cellranger_aggr_bam:
+    input:
+        csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
+    output:
+        bam = join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}', 'outs', 'possorted_genome_bam.bam')
+    params:
+        script = srcdir('scripts/cellranger_merge_bam.py')
+    threads:
+        8
+    singularity:
+        'docker://gcfntnu/sambamba:0.7'
+    shell:
+        'python {params.script} {input} {output}'
+
+
 rule cellranger_aggr_scanpy:
     input:
         rules.cellranger_aggr.output.filt_h5
