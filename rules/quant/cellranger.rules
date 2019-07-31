@@ -199,7 +199,7 @@ rule cellranger_aggr_scanpy:
     input:
         rules.cellranger_aggr.output.filt_h5
     params:
-        script = srcdir('scripts/cellranger_scanpy.py'),
+        script = srcdir('scripts/convert_scanpy.py'),
         genome_name  = config['db']['10xgenomics']['version'][config['organism']],
         norm = config['quant']['aggregate']['norm']
     output:
@@ -228,7 +228,7 @@ rule cellranger_scanpy_convert:
     input:
         join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')
     params:
-        script = srcdir('scripts/cellranger_scanpy.py')
+        script = srcdir('scripts/convert_scanpy.py')
     output:
         join(CR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:

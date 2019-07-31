@@ -100,7 +100,7 @@ rule starsolo_scanpy_convert:
         mat = join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx'),
         mem_clean = rules.starsolo_clean_shmem.output
     params:
-        script = srcdir('scripts/cellranger_scanpy.py')
+        script = srcdir('scripts/convert_scanpy.py')
     output:
         join(STAR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
@@ -113,7 +113,7 @@ rule starsolo_scanpy_aggr:
         mat = expand(rules.starsolo_quant.output.feature_mtx, sample=SAMPLES),
         mem_clean = rules.starsolo_clean_shmem.output
     params:
-        script = srcdir('scripts/cellranger_scanpy.py'),
+        script = srcdir('scripts/convert_scanpy.py'),
         norm = config['quant']['aggregate']['norm']
     output:
         join(QUANT_INTERIM, 'aggregate', 'star', 'scanpy', 'scanpy_aggr.h5ad')

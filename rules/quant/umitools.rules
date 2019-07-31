@@ -136,7 +136,7 @@ rule umitools_scanpy:
     input:
       rules.umitools_quant.output
     params:
-        script = srcdir('scripts/umitools_scanpy.py')
+        script = srcdir('scripts/convert_scanpy.py')
     output:
         join(UMI_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
