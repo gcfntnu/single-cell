@@ -194,7 +194,6 @@ rule cellranger_aggr_bam:
     shell:
         'python {params.script} {input} {output}'
 
-
 rule cellranger_aggr_scanpy:
     input:
         rules.cellranger_aggr.output.filt_h5
@@ -228,26 +227,13 @@ rule cellranger_scanpy_convert:
     input:
         join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')
     params:
-        script = srcdir('scripts/convert_scanpy.py')
+        script = srcdir('scripts/convert_scanpy.py'),
+        genome_name  = config['db']['10xgenomics']['version'][config['organism']]
     output:
         join(CR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.4.3'
     shell:
         'python {params.script} {input} -o {output} -v -f cellranger'
-
-rule cellranger_seurat_aggr:
-    input:
-        join(CR_INTERIM, '{sample}', 'outs','filtered_feature_bc_matrix')
-    params:
-        script = srcdir('scripts/cellranger_seurat.R')
-    output:
-        join(QUANT_INTERIM, 'seurat', '{sample}', '{sample}.loom')
-    singularity:
-        'docker://gcfntnu/seurat:dev-3.0.1'
-    shell:
-        'Rscript {params.script} --input {input} --format loom --output {output}'
-
-
-            
+        
         

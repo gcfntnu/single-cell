@@ -33,6 +33,7 @@ elif 'reference_db' in config['db']:
             for org in ORG.split('__'):
                 REF_DIR.append(join(EXT_DIR, ref, org, DB_CONF['version'][org]))
     else:
+        print(DB_CONF)
         REF_DIR = join(EXT_DIR, ref, ORG, DB_CONF['version'][ORG])
 else:
     REF_DIR = None

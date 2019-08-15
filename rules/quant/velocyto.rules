@@ -17,26 +17,7 @@ include:
 include:
     'cellranger.rules'
 
-rule velocyto_cellranger_aggr:
-    input:
-        rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk.gtf'),
-        gtf = join(REF_DIR, 'genes', 'genes.gtf'),
-        h5 = join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}', 'outs', 'filtered_feature_bc_matrix.h5')
-    params:
-        sample = join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}')
-    output:
-        join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}', 'velocyto', '{aggr_id}.loom__')
-    singularity:
-        'docker://gcfntnu/velocyto:0.17.17'
-    shell:
-        'velocyto run10x '
-        '--samtools-threads 8 '
-        '--verbose '
-        '-m {input.rep_gtf} '
-        '{params.sample} '
-        '{input.gtf} '
-
-rule velocyto_cellranger_sample:
+rule velocyto_cellranger:
     input:
         rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk.gtf'),
         gtf = join(REF_DIR, 'genes', 'genes.gtf'),
@@ -55,8 +36,27 @@ rule velocyto_cellranger_sample:
         '{params.sample} '
         '{input.gtf} '
 
-rule velocyto_loom_aggr:
+rule velocyto_scanpy:
     input:
-        join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
+        join(QUANT_INTERIM, '{quant}', '{sample}', 'velocyto', '{sample}.loom')
+    params:
+        script = srcdir('scripts/convert_scanpy.py')
     output:
-        join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}', 'velocyto', '{aggr_id}.loom')
+        join(QUANT_INTERIM, '{quant}', '{sample}', 'velocyto', '{sample}.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.4.3'
+    shell:
+        'python {params.script} {input} -o {output} -v -f velocyto '
+
+rule velocyto_aggr_scanpy:
+    input:
+        loom = expand(join(QUANT_INTERIM, 'cellranger', '{sample}', 'velocyto', '{sample}.loom'), sample=SAMPLES),
+        csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
+    params:
+        script = srcdir('scripts/convert_scanpy.py')
+    output:
+        join(QUANT_INTERIM, 'aggregate', '{quant}', 'velocyto', '{aggr_id}.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.4.3'
+    shell:
+        'python {params.script} {input.loom} --aggr-csv {input.csv} -o {output} -v -f velocyto '

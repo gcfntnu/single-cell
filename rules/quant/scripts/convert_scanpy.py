@@ -12,6 +12,7 @@ import pandas as pd
 import numpy as np
 import anndata
 from vpolo.alevin import parser as alevin_parser
+import scvelo as sv
 
 GENOME = {'homo_sapiens': 'GRCh38',
           'human': 'GRCh38',
@@ -25,11 +26,12 @@ GENOME = {'homo_sapiens': 'GRCh38',
 
 parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
-parser.add_argument('input', help='input file(s)', nargs='+')
+parser.add_argument('input', help='input file(s)', nargs='*', default=None)
 parser.add_argument('-o', '--outfile', help='output filename', required=True)
 parser.add_argument('-f', '--input-format', choices=['cellranger_aggr', 'cellranger', 'star', 'alevin', 'umitools', 'velocyto'],
                     default='cellranger_aggr', help='input file format')
 parser.add_argument('-F', '--output-format', choices=['anndata', 'loom', 'csvs'], default='anndata', help='output file format')
+parser.add_argument('--aggr-csv', help='aggregation CSV with header and two columns. First column is `library_id` and second column is path to input file. This is used as a substitute for input files', default=None)
 parser.add_argument('--sample-info', help='samplesheet info, tab seprated file assumes `Sample_ID` in header', default=None)
 parser.add_argument('--feature-info', help='extra feature info filename, tab seprated file assumes `gene_ids` in header', default=None)
 parser.add_argument('--filter-org', help='filter data (genes) by organism', default=None)
@@ -71,6 +73,22 @@ def remove_duplicate_cols(df, copy=False):
     df.columns = new_cols
     if copy:
         return df
+
+def filter_input_by_csv(input, csv_fn, verbose=False):
+    filtered_input = []
+    with open(csv_fn) as fh:
+        txt = fh.read().splitlines()
+        csv_rows = []
+        for line in txt[1:]:
+            csv_rows.append(line.split(','))
+    for sample_id, pth in csv_rows:
+        for pth in input:
+            if '/' + sample_id + '/'  in pth:
+                filtered_input.append(pth)
+    if verbose:
+        print('Total input: {}'.format(len(input)))
+        print('Filtered input: {}'.format(len(filtered_input)))
+    return filtered_input
 
 def read_cellranger(fn, args, rm_zero_cells=True, **kw):
     """read cellranger results
@@ -170,11 +188,19 @@ def read_alevin(fn, args, **kw):
 def read_umitools(fn, **kw):
     raise NotImplementedError
 
-READERS = {'cellranger_aggr': read_cellranger_aggr, 'cellranger': read_cellranger, 'star': read_star, 'umitools': read_umitools, 'alevin': read_alevin}
+READERS = {'cellranger_aggr': read_cellranger_aggr,
+           'cellranger': read_cellranger,
+           'star': read_star,
+           'umitools': read_umitools,
+           'alevin': read_alevin,
+           'velocyto': read_velocyto_loom}
         
 if __name__ == '__main__':
     args = parser.parse_args()
-    
+
+    if args.aggr_csv is not None:
+        args.input = filter_input_by_csv(args.input, args.aggr_csv, verbose=args.verbose)
+            
     reader = READERS.get(args.input_format.lower())
     if reader is None:
         raise ValueError('{} is not a supported input format'.format(args.input_format))
