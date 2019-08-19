@@ -80,7 +80,7 @@ rule cellranger_quant_:
     params:
         input = input_fastq_path,
         id = '{sample}',
-        outdir = CR_INTERIM,
+        outdir = '_cr_tmp',
         sample = '{sample}',
         genome_dir = CR_REF_DIR,
         ncells = config['quant']['cellranger']['ncells'],
@@ -89,12 +89,12 @@ rule cellranger_quant_:
     threads:
         48
     output:
-        summary = join('{sample}', 'outs', 'web_summary.html'),
-        raw_h5 = join('{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
-        filt_h5 = join('{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
-        mol_h5 = join('{sample}', 'outs', 'molecule_info.h5'),
-        raw_mtx = join('{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
-        filt_mtx = join('{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
+        summary = join('_cr_tmp', '{sample}', 'outs', 'web_summary.html'),
+        raw_h5 = join('_cr_tmp','{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
+        filt_h5 = join('_cr_tmp','{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
+        mol_h5 = join('_cr_tmp','{sample}', 'outs', 'molecule_info.h5'),
+        raw_mtx = join('_cr_tmp','{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
+        filt_mtx = join('_cr_tmp','{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     singularity:
         CR_CONF['docker']
     benchmark:
@@ -128,7 +128,7 @@ rule cellranger_quant:
         filt_mtx = join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     params:
         outdir = CR_INTERIM,
-        sample = '{sample}',
+        sample = '_cr_tmp/{sample}',
     threads:
         1
     shell:
