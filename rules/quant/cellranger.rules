@@ -80,7 +80,7 @@ rule cellranger_quant_:
     params:
         input = input_fastq_path,
         id = '{sample}',
-        outdir = CR_INTERIM,
+        outdir = '_cr_tmp',
         sample = '{sample}',
         genome_dir = CR_REF_DIR,
         ncells = config['quant']['cellranger']['ncells'],
@@ -89,12 +89,12 @@ rule cellranger_quant_:
     threads:
         48
     output:
-        summary = join('{sample}', 'outs', 'web_summary.html'),
-        raw_h5 = join('{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
-        filt_h5 = join('{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
-        mol_h5 = join('{sample}', 'outs', 'molecule_info.h5'),
-        raw_mtx = join('{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
-        filt_mtx = join('{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
+        summary = join('_cr_tmp', '{sample}', 'outs', 'web_summary.html'),
+        raw_h5 = join('_cr_tmp','{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
+        filt_h5 = join('_cr_tmp','{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
+        mol_h5 = join('_cr_tmp','{sample}', 'outs', 'molecule_info.h5'),
+        raw_mtx = join('_cr_tmp','{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
+        filt_mtx = join('_cr_tmp','{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     singularity:
         CR_CONF['docker']
     benchmark:
@@ -128,7 +128,7 @@ rule cellranger_quant:
         filt_mtx = join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     params:
         outdir = CR_INTERIM,
-        sample = '{sample}',
+        sample = '_cr_tmp/{sample}',
     threads:
         1
     shell:
@@ -180,11 +180,25 @@ rule cellranger_aggr:
         'cp -r {params.id} {params.outdir}/ && '
         'rm -rf {params.id} '
 
+rule cellranger_aggr_bam:
+    input:
+        csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
+    output:
+        bam = join(QUANT_INTERIM, 'aggregate', 'cellranger', '{aggr_id}', 'outs', 'possorted_genome_bam.bam')
+    params:
+        script = srcdir('scripts/cellranger_merge_bam.py')
+    threads:
+        8
+    singularity:
+        'docker://gcfntnu/sambamba:0.7'
+    shell:
+        'python {params.script} {input} {output}'
+
 rule cellranger_aggr_scanpy:
     input:
         rules.cellranger_aggr.output.filt_h5
     params:
-        script = srcdir('scripts/cellranger_scanpy.py'),
+        script = srcdir('scripts/convert_scanpy.py'),
         genome_name  = config['db']['10xgenomics']['version'][config['organism']],
         norm = config['quant']['aggregate']['norm']
     output:
@@ -213,26 +227,13 @@ rule cellranger_scanpy_convert:
     input:
         join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')
     params:
-        script = srcdir('scripts/cellranger_scanpy.py')
+        script = srcdir('scripts/convert_scanpy.py'),
+        genome_name  = config['db']['10xgenomics']['version'][config['organism']]
     output:
         join(CR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
         'docker://gcfntnu/scanpy:1.4.3'
     shell:
         'python {params.script} {input} -o {output} -v -f cellranger'
-
-rule cellranger_seurat_aggr:
-    input:
-        join(CR_INTERIM, '{sample}', 'outs','filtered_feature_bc_matrix')
-    params:
-        script = srcdir('scripts/cellranger_seurat.R')
-    output:
-        join(QUANT_INTERIM, 'seurat', '{sample}', '{sample}.loom')
-    singularity:
-        'docker://gcfntnu/seurat:dev-3.0.1'
-    shell:
-        'Rscript {params.script} --input {input} --format loom --output {output}'
-
-
-            
+        
         

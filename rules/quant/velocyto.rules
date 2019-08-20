@@ -14,6 +14,8 @@ VELOCYTO_CONF = config['quant'].get('velocyto', {})
 
 include:
     '../gcfdb/ucsc.db'
+include:
+    'cellranger.rules'
 
 rule velocyto_cellranger:
     input:
@@ -28,6 +30,33 @@ rule velocyto_cellranger:
         'docker://gcfntnu/velocyto:0.17.17'
     shell:
         'velocyto run10x '
+        '--samtools-threads 8 '
+        '--verbose '
         '-m {input.rep_gtf} '
         '{params.sample} '
         '{input.gtf} '
+
+rule velocyto_scanpy:
+    input:
+        join(QUANT_INTERIM, '{quant}', '{sample}', 'velocyto', '{sample}.loom')
+    params:
+        script = srcdir('scripts/convert_scanpy.py')
+    output:
+        join(QUANT_INTERIM, '{quant}', '{sample}', 'velocyto', '{sample}.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.4.3'
+    shell:
+        'python {params.script} {input} -o {output} -v -f velocyto '
+
+rule velocyto_aggr_scanpy:
+    input:
+        loom = expand(join(QUANT_INTERIM, 'cellranger', '{sample}', 'velocyto', '{sample}.loom'), sample=SAMPLES),
+        csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
+    params:
+        script = srcdir('scripts/convert_scanpy.py')
+    output:
+        join(QUANT_INTERIM, 'aggregate', '{quant}', 'velocyto', '{aggr_id}.h5ad')
+    singularity:
+        'docker://gcfntnu/scanpy:1.4.3'
+    shell:
+        'python {params.script} {input.loom} --aggr-csv {input.csv} -o {output} -v -f velocyto '

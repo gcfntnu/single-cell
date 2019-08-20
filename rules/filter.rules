@@ -9,7 +9,7 @@ if os.path.exists(extra_conf_fn):
 
 FILTER_INTERIM = join(INTERIM_DIR, 'singlecell', 'filter')
 
-def _filter_get_raw_R1(wildcards):
+def _filter_get_raw_R1(wildcards):    
     sscol = config.get('merge', {}).get('sscol', 'Sample_ID')
     skip = config.get('merge', {}).get('skip', True)
     if sscol == 'Sample_ID' or skip:
