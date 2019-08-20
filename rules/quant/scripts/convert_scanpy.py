@@ -39,6 +39,7 @@ parser.add_argument('--gex-only', help='only keep `Gene Expression` data and ign
 parser.add_argument('--normalize', help='normalize depth across the input libraries', default='none', choices=['none', 'mapped'])
 parser.add_argument('--batch', help='column name in `sample-info` with batch covariate', default=None)
 parser.add_argument('--no-zero-cell-rm', help='do not remove cells with zero counts', action='store_true')
+parser.add_argument('--identify-doublets', help='estimate doublets using Scrublets (Single-Cell Remover of Doublets)', action='store_true')
 parser.add_argument('-v ', '--verbose', help='verbose output.', action='store_true')
 
 
@@ -75,13 +76,18 @@ def remove_duplicate_cols(df, copy=False):
         return df
 
 def filter_input_by_csv(input, csv_fn, verbose=False):
+    """Filter input files based on match with Sample_ID in input path.
+
+    Matching Sample_ID is first column in CSV file.
+    """
     filtered_input = []
     with open(csv_fn) as fh:
         txt = fh.read().splitlines()
         csv_rows = []
         for line in txt[1:]:
             csv_rows.append(line.split(','))
-    for sample_id, pth in csv_rows:
+    for row in csv_rows:
+        sample_id = row[0]
         for pth in input:
             if '/' + sample_id + '/'  in pth:
                 filtered_input.append(pth)
@@ -90,6 +96,18 @@ def filter_input_by_csv(input, csv_fn, verbose=False):
         print('Filtered input: {}'.format(len(filtered_input)))
     return filtered_input
 
+def identify_doublets(data, **kw):
+    """Detect doublets in single-cell RNA-seq data
+
+    https://github.com/AllonKleinLab/scrublet
+    """
+    import scrublet as scr
+    scrub = scr.Scrublet(data.X, **kw)
+    doublet_score, predicted_doublets = scrub.scrub_doublets()
+    data.obs['doublet_score'] =  doublet_score
+    data.obs['predicted_doublets'] = predicted_doublets
+    return data
+    
 def read_cellranger(fn, args, rm_zero_cells=True, **kw):
     """read cellranger results
 
@@ -237,6 +255,8 @@ if __name__ == '__main__':
     for i, fn in enumerate(args.input):
         fn = os.path.abspath(fn)
         data = reader(fn, args)
+        if args.identify_doublets:
+            data = identify_doublets(data)
         data_list.append(data)
 
     if len(data_list) > 1:
