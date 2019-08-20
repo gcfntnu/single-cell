@@ -55,6 +55,7 @@ rule starsolo_quant:
         genome_dir = join(REF_DIR, 'star'),
         cb_len = LIBPREP['starsolo']['cb_len'],
         umi_len = LIBPREP['starsolo']['umi_len'],
+        uni_start = LIBPREP['starsolo']['umi_start'],
         R1 = starsolo_R1,
         R2 = starsolo_R2,
         extra_args = '--genomeLoad LoadAndKeep ' 
@@ -79,6 +80,7 @@ rule starsolo_quant:
         '--outFileNamePrefix {params.outdir} '
         '--soloCBlen {params.cb_len} '
         '--soloUMIlen {params.umi_len} '
+        '--soloUMIstart {params.umi_start} '
         '--outSAMtype BAM SortedByCoordinate '
         '--outSAMattributes CR CY UR UY ' # add error corrected bc when avail (for velocyto)
         '--limitBAMsortRAM 24000000000' 
