@@ -2,6 +2,7 @@
 
 import os
 import re
+import six
 
 from snakemake import logger
 
@@ -23,14 +24,11 @@ else:
     CR_REF_DIR = REF_DIR
 
 def input_fastq_path(wildcards, input):
-    R1 = get_filtered_fastq_R1(wildcards)
-    if config['filter']['skip']:
-        fq_dir = config['fastq_dir']
-    else:
-        fq_dir = join(FILTER_INTERIM, 'fastp_10x')
-    if not fq_dir.endswith(os.path.sep):
-        fq_dir += os.path.sep
     pths = set()
+    if isinstance(input.R1, six.string_types):
+        R1 = [input.R1]
+    else:
+        R1 = input.R1
     for r1 in R1:
         pth, bn = os.path.split(r1)
         pths.add(pth)
@@ -79,8 +77,7 @@ rule cellranger_quant_:
         genome = join(CR_REF_DIR, 'fasta', 'genome.fa')
     params:
         input = input_fastq_path,
-        id = '{sample}',
-        outdir = '_cr_tmp',
+        id = '_tmp_{sample}',
         sample = '{sample}',
         genome_dir = CR_REF_DIR,
         ncells = config['quant']['cellranger']['ncells'],
@@ -89,12 +86,12 @@ rule cellranger_quant_:
     threads:
         48
     output:
-        summary = join('_cr_tmp', '{sample}', 'outs', 'web_summary.html'),
-        raw_h5 = join('_cr_tmp','{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
-        filt_h5 = join('_cr_tmp','{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
-        mol_h5 = join('_cr_tmp','{sample}', 'outs', 'molecule_info.h5'),
-        raw_mtx = join('_cr_tmp','{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
-        filt_mtx = join('_cr_tmp','{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
+        summary = join('_tmp_{sample}', 'outs', 'web_summary.html'),
+        raw_h5 = join('_tmp_{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
+        filt_h5 = join('_tmp_{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
+        mol_h5 = join('_tmp_{sample}', 'outs', 'molecule_info.h5'),
+        raw_mtx = join('_tmp_{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
+        filt_mtx = join('_tmp_{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     singularity:
         CR_CONF['docker']
     benchmark:
@@ -127,13 +124,13 @@ rule cellranger_quant:
         raw_mtx = join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
         filt_mtx = join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     params:
-        outdir = CR_INTERIM,
-        sample = '_cr_tmp/{sample}',
+        outdir = join(CR_INTERIM, '{sample}'),
+        id = '_tmp_{sample}'
     threads:
         1
     shell:
-        'cp -r {params.sample} {params.outdir} && '
-        'rm -rf {params.sample} '
+        'cp -r {params.id}/* {params.outdir} && '
+        'rm -rf {params.id} '
 
 checkpoint cellranger_aggr_csv:
     input:

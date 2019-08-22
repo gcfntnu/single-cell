@@ -10,5 +10,3 @@ if os.path.exists(extra_conf_fn):
 ANALYSIS_INTERIM = join(INTERIM_DIR, 'singlecell', 'analysis')
 ANALYSIS_PROCESSED = join(PROCESSED_DIR, 'singlecell', 'analysis')
 
-include:
-    'analysis/preprocess/'

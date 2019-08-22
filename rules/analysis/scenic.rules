@@ -28,11 +28,14 @@ rule scenic_hda5_exprs_mtx:
 
 rule scenic_grn:
     input:
-        mtx = join(ANALYSIS_INTERIM, 'scenic', '{id}_counts.mtx') 
+        mtx = join(ANALYSIS_INTERIM, 'scenic', '{id}_counts.mtx'),
+        tf = rules.pyscenic_tf.output
     threads:
         8
     singularity:
         'shub://aertslab/pySCENIC:0.9.9'
+    output:
+        join(ANALYSIS_INTERIM, 'scenic', '{id}_adj.tsv'),
     shell:
         'pyscenic grn '
         '-o {output} '
