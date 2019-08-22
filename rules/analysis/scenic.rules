@@ -1,4 +1,8 @@
-
+#-*- mode:snakemake -*-
+"""pySCENIC Single-Cell rEgulatory Network Inference and Clustering
+"""
+include:
+    '../gcfdb/pyscenic.db'
 
 rule scenic_hda5_counts_mtx:
     input:
@@ -8,7 +12,8 @@ rule scenic_hda5_counts_mtx:
     params:
         script = srcdir('scripts/pyscenic_grn_input.py')
     shell:
-        'python {params.script} {input} > {output}'
+        'python {params.script} {input} > {output} '
+
 
 rule scenic_hda5_exprs_mtx:
     input:
@@ -18,17 +23,12 @@ rule scenic_hda5_exprs_mtx:
     params:
         script = srcdir('scripts/pyscenic_grn_input.py')
     shell:
-        'python {params.script} --use-norm-exprs {input} > {output}'
-        
+        'python {params.script} --use-norm-exprs {input} > {output} '
+
+
 rule scenic_grn:
     input:
-        mtx = join(ANALYSIS_INTERIM, 'scenic', '{id}_counts.mtx')
-        tf  = 
-        
-    output:
-        adj = '',
-        exprs = '',
-        tf = ''
+        mtx = join(ANALYSIS_INTERIM, 'scenic', '{id}_counts.mtx') 
     threads:
         8
     singularity:
