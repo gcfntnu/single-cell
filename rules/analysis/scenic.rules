@@ -8,11 +8,13 @@ rule scenic_hda5_counts_mtx:
     input:
         join(QUANT_INTERIM, 'aggregate', 'cellranger', 'scanpy', '{id}_aggr.h5ad')
     output:
-        join(ANALYSIS_INTERIM, 'scenic', '{id}_counts.mtx') 
+        join(ANALYSIS_INTERIM, 'scenic', '{id}', 'X.csv')
     params:
-        script = srcdir('scripts/pyscenic_grn_input.py')
+        out =  join(ANALYSIS_INTERIM, 'scenic', '{id}')
+    params:
+        script = srcdir('scripts/pyscenic_grn_input.py {input} {params.out}')
     shell:
-        'python {params.script} {input} > {output} '
+        'python {params.script} {input} {output} '
 
 
 rule scenic_hda5_exprs_mtx:
@@ -24,6 +26,7 @@ rule scenic_hda5_exprs_mtx:
         script = srcdir('scripts/pyscenic_grn_input.py')
     shell:
         'python {params.script} --use-norm-exprs {input} > {output} '
+
 
 
 rule scenic_grn:
