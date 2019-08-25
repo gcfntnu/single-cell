@@ -35,7 +35,6 @@ def update_config2(config, extra_config):
       overwrite_config (dict): dictionary whose items will overwrite those in config
 
     """
-    
     def _update(d, u):
         for (key, value) in u.items():
             if (isinstance(value, collections.Mapping)):

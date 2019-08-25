@@ -210,18 +210,16 @@ rule cellranger_aggr_scanpy:
         rules.cellranger_aggr.output.filt_h5
     params:
         script = srcdir('scripts/convert_scanpy.py'),
-        genome_name  = config['db']['10xgenomics']['version'][config['organism']],
         norm = config['quant']['aggregate']['norm']
     output:
         join(QUANT_INTERIM, 'aggregate', 'cellranger', 'scanpy', '{aggr_id}_aggr.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.3'
+        'docker://gcfntnu/scanpy:1.4.4'
     shell:
         'python {params.script} '
         '{input} '
         '-o {output} '
         '-f cellranger_aggr '
-        '--genome {params.genome_name} '
         '--normalize {params.norm} '
         '--identify-doublets '
         '-v '
@@ -239,7 +237,7 @@ rule cellranger_scanpy_convert:
     output:
         join(CR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.3'
+        'docker://gcfntnu/scanpy:1.4.4'
     shell:
         'python {params.script} {input} -o {output} -v -f cellranger'
         

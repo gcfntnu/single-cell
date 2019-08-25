@@ -40,6 +40,7 @@ parser.add_argument('--normalize', help='normalize depth across the input librar
 parser.add_argument('--batch', help='column name in `sample-info` with batch covariate', default=None)
 parser.add_argument('--no-zero-cell-rm', help='do not remove cells with zero counts', action='store_true')
 parser.add_argument('--identify-doublets', help='estimate doublets using Scrublets (Single-Cell Remover of Doublets)', action='store_true')
+parser.add_argument('--identify-empty-droplets', help='estimate empty droplets using emptyDrops (DropletUtils)', action='store_true')
 parser.add_argument('-v ', '--verbose', help='verbose output.', action='store_true')
 
 
@@ -107,7 +108,27 @@ def identify_doublets(data, **kw):
     data.obs['doublet_score'] =  doublet_score
     data.obs['predicted_doublets'] = predicted_doublets
     return data
-    
+
+def identify_empty_droplets(data, **kw):
+    """Detect empty droplets using DropletUtils
+
+    """
+    import rpy2.robjects as robj
+    from rpy2.robjects.packages import importr
+    import anndata2ri
+    from rpy2.robjects.conversion import localconverter
+    importr("DropletUtils")
+    try:
+        with localconverter(anndata2ri.converter):
+            adata.X = data.X.tocsc()
+            robj.globalenv["X"] = adata
+            res = robj.r('res <- emptyDrops(assay(X))')
+            data.obs['empty_FDR'] = res['FDR']
+    except:
+        warnings.warn('emptyDrops failed, setting all umi FDR to zero!')
+        data.obs['empty_FDR'] = 0
+    return data
+
 def read_cellranger(fn, args, rm_zero_cells=True, **kw):
     """read cellranger results
 
@@ -255,6 +276,8 @@ if __name__ == '__main__':
     for i, fn in enumerate(args.input):
         fn = os.path.abspath(fn)
         data = reader(fn, args)
+        if args.identify_empty_droplets:
+            data = identify_empty_droplets(data)
         if args.identify_doublets:
             data = identify_doublets(data)
         data_list.append(data)
