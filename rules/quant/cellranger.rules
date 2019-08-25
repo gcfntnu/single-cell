@@ -3,6 +3,7 @@
 import os
 import re
 import six
+from collections import defaultdict
 
 from snakemake import logger
 
@@ -17,6 +18,18 @@ ORG = config.get('organism', 'homo_sapiens')
 CR_PROCESSED = join(QUANT_PROCESSED, 'cellranger')
 CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
 CR_CONF = config['quant']['cellranger']
+AGGR = not config['quant']['aggregate']['skip']
+if AGGR:
+    AGGR_IDS = defaultdict(list)
+    groupby = config['quant']['aggregate'].get('groupby', 'all_samples')
+    for k, v in config['samples'].items():
+        if groupby in v:
+            aggr_id = v[groupby]
+            AGGR_IDS[aggr_id].append(k)
+        elif groupby == 'all_samples':
+            AGGR_IDS['all_samples'].append(k)
+        else:
+            raise ValueError
 
 if not '10xgenomics' in REF_DIR:
     CR_REF_DIR = join(REF_DIR, 'cellranger')
@@ -132,23 +145,24 @@ rule cellranger_quant:
         'cp -r {params.id}/* {params.outdir} && '
         'rm -rf {params.id} '
 
-checkpoint cellranger_aggr_csv:
+rule cellranger_aggr_csv:
     input:
         sample_info = 'data/processed/sample_info.txt',
         mol_h5 = expand(rules.cellranger_quant.output.mol_h5, sample=SAMPLES)
     params:
         script = srcdir('scripts/cellranger_aggr_csv.py'),
-        groupby = config['quant']['aggregate'].get('groupby', 'all_samples')
+        groupby = config['quant']['aggregate'].get('groupby', 'all_samples'),
+        outdir = join(QUANT_INTERIM, 'aggregate', 'description')
     output:
-        csv_dir = directory(join(QUANT_INTERIM, 'aggregate', 'description'))
+        expand(join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv'), aggr_id=AGGR_IDS.keys())
     shell:
         'python {params.script} '
         '{input.mol_h5} '
-        '--outdir {output} '
+        '--outdir {params.outdir} '
         '--sample-info {input.sample_info} '
-        '--groupby {params.groupby}'
+        '--groupby {params.groupby} '
         '--verbose '
- 
+        
 rule cellranger_aggr:
     input:
         csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
@@ -209,17 +223,13 @@ rule cellranger_aggr_scanpy:
         '-f cellranger_aggr '
         '--genome {params.genome_name} '
         '--normalize {params.norm} '
+        '--identify-doublets '
         '-v '
 
-def cellranger_aggr_input(wildcards):
-    cp = checkpoints.cellranger_aggr_csv
-    a = glob_wildcards(join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv'))
-    return expand(rules.cellranger_aggr_scanpy.output, aggr_id=a.aggr_id)
-
-rule cellranger_aggr_scanpy_all:
+rule cellranger_aggr_scanpy2:
     input:
-       cellranger_aggr_input
-
+        expand(rules.cellranger_aggr_scanpy.output, aggr_id=AGGR_IDS.keys())
+        
 rule cellranger_scanpy_convert:
     input:
         join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')

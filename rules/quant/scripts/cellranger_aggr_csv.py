@@ -33,6 +33,7 @@ def read_sample_info(args):
             if gr == 'all_samples':
                 continue
             else:
+                print(gr)
                 assert(gr in df.columns)
                 if args.verbose:
                     _groups = list(set(df[gr]))
