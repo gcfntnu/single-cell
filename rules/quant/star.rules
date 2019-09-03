@@ -55,7 +55,7 @@ rule starsolo_quant:
         genome_dir = join(REF_DIR, 'star'),
         cb_len = LIBPREP['starsolo']['cb_len'],
         umi_len = LIBPREP['starsolo']['umi_len'],
-        uni_start = LIBPREP['starsolo']['umi_start'],
+        umi_start = LIBPREP['starsolo']['umi_start'],
         R1 = starsolo_R1,
         R2 = starsolo_R2,
         extra_args = '--genomeLoad LoadAndKeep ' 
@@ -83,7 +83,7 @@ rule starsolo_quant:
         '--soloUMIstart {params.umi_start} '
         '--outSAMtype BAM SortedByCoordinate '
         '--outSAMattributes CR CY UR UY ' # add error corrected bc when avail (for velocyto)
-        '--limitBAMsortRAM 24000000000' 
+        '--limitBAMsortRAM 24000000000 ' 
         '--runThreadN {threads} '
         '{params.extra_args} '
 
@@ -106,7 +106,7 @@ rule starsolo_scanpy_convert:
     output:
         join(STAR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.3'
+        'docker://gcfntnu/scanpy:1.4.4'
     shell:
         'python {params.script} {input.mat} -f star -o {output} -v '
  
@@ -120,13 +120,14 @@ rule starsolo_scanpy_aggr:
     output:
         join(QUANT_INTERIM, 'aggregate', 'star', 'scanpy', 'scanpy_aggr.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.3'
+        'docker://gcfntnu/scanpy:1.4.4'
     shell:
         'python {params.script} '
-        '{input} '
+        '{input.mat} '
         '-o {output} '
         '-f star '
-        '--normalize {params.norm} '
+        '--identify-empty-droplets '
+        '--identify-doublets '
         '-v '       
 
 rule starsolo_bam_merge:

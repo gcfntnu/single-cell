@@ -56,7 +56,7 @@ def downsample_gemgroup(data_list):
             idx = i
     for j, data in enumerate(data_list):
         if j != idx:
-            sc.pp.downsample_counts(data, target_counts = min_count)
+            sc.pp.downsample_counts(data, total_counts = min_count)
         sampled_list.append(data)
     return sampled_list
 
@@ -103,8 +103,16 @@ def identify_doublets(data, **kw):
     https://github.com/AllonKleinLab/scrublet
     """
     import scrublet as scr
-    scrub = scr.Scrublet(data.X, **kw)
+    adata = data.copy()
+    col_sum = adata.X.sum(0)
+    if hasattr(col_sum, 'A'):
+        col_sum = col_sum.A.squeeze()
+    keep = col_sum > 3
+    adata = adata[:,keep]
+    scrub = scr.Scrublet(adata.X, **kw)
     doublet_score, predicted_doublets = scrub.scrub_doublets()
+    if predicted_doublets is None:
+        predicted_doublets = scrub.call_doublets(threshold=0.34)
     data.obs['doublet_score'] =  doublet_score
     data.obs['predicted_doublets'] = predicted_doublets
     return data
@@ -114,19 +122,26 @@ def identify_empty_droplets(data, **kw):
 
     """
     import rpy2.robjects as robj
+    from rpy2.robjects import default_converter
     from rpy2.robjects.packages import importr
     import anndata2ri
     from rpy2.robjects.conversion import localconverter
     importr("DropletUtils")
-    try:
-        with localconverter(anndata2ri.converter):
-            adata.X = data.X.tocsc()
-            robj.globalenv["X"] = adata
-            res = robj.r('res <- emptyDrops(assay(X))')
-            data.obs['empty_FDR'] = res['FDR']
-    except:
-        warnings.warn('emptyDrops failed, setting all umi FDR to zero!')
-        data.obs['empty_FDR'] = 0
+    adata = data.copy()
+    col_sum = adata.X.sum(0)
+    if hasattr(col_sum, 'A'):
+        col_sum = col_sum.A.squeeze()
+    keep = col_sum > 3
+    adata = adata[:,keep]
+    #adata.X = adata.X.tocsc()
+    anndata2ri.activate()
+    robj.globalenv["X"] = adata
+    res = robj.r('res <- emptyDrops(assay(X))')
+    anndata2ri.deactivate()
+    keep = res.loc[res.FDR<0.01,:]
+    data = data[keep.index,:] 
+    data.obs['empty_FDR'] = keep['FDR']
+    
     return data
 
 def read_cellranger(fn, args, rm_zero_cells=True, **kw):
@@ -207,6 +222,13 @@ def read_star(fn, args, **kw):
     if len(barcodes) == len(set(barcodes)):
         data.obs_names = barcodes
     data.obs_names = [i + '-' + sample_id for i in data.obs_names]
+    if not args.no_zero_cell_rm:
+        row_sum = data.X.sum(1)
+        if hasattr(row_sum, 'A'):
+            row_sum = row_sum.A.squeeze()
+        keep = row_sum > 1
+        print(sum(keep), len(keep))
+        data = data[keep,:]
     return data
 
 def read_alevin(fn, args, **kw):
@@ -277,8 +299,13 @@ if __name__ == '__main__':
         fn = os.path.abspath(fn)
         data = reader(fn, args)
         if args.identify_empty_droplets:
+            if args.verbose:
+                print("identify empty droplets ...")
             data = identify_empty_droplets(data)
+            print(data.shape)
         if args.identify_doublets:
+            if args.verbose:
+                print("identify doublets ...")                
             data = identify_doublets(data)
         data_list.append(data)
 
