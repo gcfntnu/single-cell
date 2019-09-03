@@ -19,7 +19,9 @@ import yaml
 
 from snakemake.workflow import srcdir
 from snakemake.logging import logger
-from snakemake.utils import update_config
+from snakemake.utils import update_config, min_version
+
+min_version("5.1.2")
 
 def update_config2(config, extra_config):
     """Recursively update dictionary config with overwrite_config.
@@ -69,13 +71,18 @@ with open(libprep_fn) as fh:
 kit = config.get('libprepkit', 'default')
 LIBPREP = LIBPREP_CONF[kit]
 
-SAMPLES = config.get('samples', [])
-    
-if SAMPLES:
-    SAMPLES = list(SAMPLES.keys())
+# load function for statistical models
+def load_model(model_yaml_file):
+    with open(model_yaml_file) as fh:
+        MODELS  = yaml.load(fh) or {}
+        config['models'] = MODELS
+        config['model_names'] = list(MODELS.keys())
+        
+if not 'SAMPLES' in locals():
+    SAMPLES = list(config.get('samples', {}).keys())
 
 include:
-    'rules/db.rules'
+    'rules/gcfdb.rules'
 include:
     'rules/filter.rules'
 include:
