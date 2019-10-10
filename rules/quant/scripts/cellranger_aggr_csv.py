@@ -80,7 +80,7 @@ if __name__ == '__main__':
                     else:
                         groups[k] = v
     if args.groupby is None or all_samples:
-        groups['all'] = list(df.index)
+        groups['all_samples'] = list(df.index)
     
 
     for name, samples in groups.items():
