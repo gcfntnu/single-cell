@@ -144,7 +144,7 @@ def identify_empty_droplets(data, **kw):
     
     return data
 
-def read_cellranger(fn, args, rm_zero_cells=True, **kw):
+def read_cellranger(fn, args, rm_zero_cells=True, add_sample_id=True, **kw):
     """read cellranger results
 
     Assumes the Sample_ID may be extracted from cellranger output dirname, 
@@ -161,36 +161,32 @@ def read_cellranger(fn, args, rm_zero_cells=True, **kw):
         data = sc.read_10x_mtx(mtx_dir, gex_only=args.gex_only, var_names='gene_ids')
         data.var['gene_ids'] = list(data.var_names)
     
-    sample_id = os.path.basename(os.path.dirname(dirname))
-    data.obs['library_id'] = sample_id
-    data.obs['library_id'] = data.obs['library_id'].astype('category')
     barcodes = [b.split('-')[0] for b in data.obs.index]
     if len(barcodes) == len(set(barcodes)):
         data.obs_names = barcodes
-    data.obs_names = [i + '-' + sample_id for i in data.obs_names]
+        
+    if add_sample_id:
+        sample_id = os.path.basename(os.path.dirname(dirname))
+        data.obs['library_id'] = sample_id
+        data.obs['library_id'] = data.obs['library_id'].astype('category')
+        data.obs_names = [i + '-' + sample_id for i in data.obs_names]
+        
     data.obs.index.name = 'barcodes'
     data.var.index.name = 'gene_ids'
     return data
         
 def read_cellranger_aggr(fn, args, **kw):
-    data = read_cellranger(fn, args)
+    data = read_cellranger(fn, args, add_sample_id=False)
     #if 'library_id' in data.obs:
     #    data.obs.rename(index=str, columns={'library_id': 'group'}, inplace=True)
     dirname = os.path.dirname(fn)
     if not fn.endswith('.h5'):
         dirname = os.path.dirname(dirname)
 
-    # fix cellranger aggr enumeration to start at 0 (matches scanpy enum)
-    barcodes =  [i[0] for i in data.obs.index.str.split('-')]
-    if any(data.obs.index.str.contains('-')):
-        barcodes_enum = [str(int(i[1])-1) for i in data.obs.index.str.split('-')]
-    else:
-        barcodes_enum = ['0'] * len(barcodes)
-    data.obs_names = ['-'.join(e) for e in zip(barcodes, barcodes_enum)]
-
     aggr_csv = os.path.join(dirname, 'aggregation.csv')
     aggr_csv = pd.read_csv(aggr_csv)
-    sample_map = dict((str(i), n) for i,n in enumerate(aggr_csv['library_id']))
+    sample_map = dict((str(i+1), n) for i, n in enumerate(aggr_csv['library_id']))
+    barcodes_enum = [i.split('-')[1] for i in data.obs_names]
     samples = [sample_map[i] for i in barcodes_enum]
     data.obs['library_id'] = samples
     data.obs['library_id'] = data.obs['library_id'].astype('category')
