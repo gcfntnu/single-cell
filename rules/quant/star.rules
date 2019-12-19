@@ -88,6 +88,8 @@ rule starsolo_quant:
         '{params.extra_args} '
 
 rule starsolo_clean_shmem:
+    input:
+        expand(rules.starsolo_quant.output, sample=SAMPLES)
     params:
         genome_dir = rules.starsolo_quant.params.genome_dir
     output:
