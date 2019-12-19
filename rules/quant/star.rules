@@ -92,7 +92,7 @@ rule starsolo_quant:
 
 rule starsolo_clean_shmem:
     input:
-        join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx')
+        expand(rules.starsolo_quant.output, sample=SAMPLES)
     params:
         genome_dir = rules.starsolo_quant.params.genome_dir
     output:

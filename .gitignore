@@ -2,3 +2,4 @@ data/
 benchmark/
 .snakmemake/
 *.sw[po]
+rules/gcfdb
