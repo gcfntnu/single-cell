@@ -31,6 +31,8 @@ if config['db']['reference_db'] != '10xgenomics': # 10x prebuilds
             readlength = config.get('read_geometry', [28, 98])[-1]
         threads:
             48
+        shadow:
+            'minimal'
         log:
             join(REF_DIR, 'logs', 'STAR.index.log')
         singularity:
@@ -43,6 +45,7 @@ if config['db']['reference_db'] != '10xgenomics': # 10x prebuilds
             '--genomeFastaFiles {input.genome} '
             '--sjdbGTFfile {input.gtf} '
             '--sjdbOverhang {params.readlength} '
+            '&& mv Log.out {log}'
 
 rule starsolo_quant:
     input:
@@ -88,12 +91,14 @@ rule starsolo_quant:
         '{params.extra_args} '
 
 rule starsolo_clean_shmem:
+    input:
+        join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx')
     params:
         genome_dir = rules.starsolo_quant.params.genome_dir
     output:
         temp(touch(join(STAR_INTERIM, '.starsolo.mem.cleaned')))
     singularity:
-        STAR_CONF['docker']    
+        STAR_CONF['docker']
     shell:
         'STAR --genomeDir {params.genome_dir} --genomeLoad Remove || echo "no shared mem"'
 

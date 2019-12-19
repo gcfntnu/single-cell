@@ -5,39 +5,8 @@ if os.path.exists(extra_conf_fn):
         c  = yaml.load(fh) or {}
         update_config2(config, c)
 
-if config['db']['reference_db'] == 'ensembl':
-    include:
-        'gcfdb/ensembl.db'
-if config['db']['reference_db'] == 'gencode':
-    include:
-        'gcfdb/gencode.db'
-
+include:
+    'gcfdb/reference_db.db'
 include:
     'gcfdb/10xgenomics.db'
-
-if 'REF_DIR' in locals():
-    pass
-elif 'ref_dir' in config:
-    REF_DIR = config['ref_dir']
-elif 'reference_db' in config['db']:
-    ref = config['db']['reference_db']
-    DB_CONF = config['db'][ref]
-    ORG = config['organism']
-    if '__' in ORG:
-        # multi-species
-        try:
-            # prebuilds
-            REF_DIR =  join(EXT_DIR, ref, ORG, DB_CONF['version'][ORG])
-        except:
-            REF_DIR = []
-            for org in ORG.split('__'):
-                REF_DIR.append(join(EXT_DIR, ref, org, DB_CONF['version'][org]))
-    else:
-        REF_DIR = join(EXT_DIR, ref, ORG, DB_CONF['version'][ORG])
-else:
-    REF_DIR = None
-
-include:
-    'gcfdb/convert.rules'
-
 
