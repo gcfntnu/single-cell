@@ -3,12 +3,11 @@
 extra_conf_fn = srcdir('star.config')
 if os.path.exists(extra_conf_fn):
     with open(extra_conf_fn) as fh:
-        c  = yaml.load(fh) or {}
+        c  = yaml.load(fh, Loader=Loader) or {}
         update_config2(config, c)
 
 #config
 ORG = config.get('organism', 'homo_sapiens')
-STAR_PROCESSED = join(QUANT_PROCESSED, 'star')
 STAR_INTERIM = join(QUANT_INTERIM, 'star')
 STAR_CONF = config['quant'].get('star', {})
 

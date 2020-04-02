@@ -1,9 +1,9 @@
 rule seurat_cellcycle:
     input:
-        seurat = 'data/processed/singlecell/analysis/preprocess/{sample}/{sample}_seurat.rds',
+        seurat = 'seurat.rds',
         markers = 'data/ext/regev_lab_cell_cycle_genes.txt'
     output:
-        'data/processed/singlecell/analysis/clustering/{sample}/{sample}_seurat.rds'
+        'seurat_cellcycle.rds'
     params:
         script = srcdir('scripts/seurat_cellcycle.R'),
         args = '--write-scores -v'

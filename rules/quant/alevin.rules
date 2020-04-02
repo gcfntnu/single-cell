@@ -3,13 +3,13 @@
 extra_conf_fn = srcdir('alevin.config')
 if os.path.exists(extra_conf_fn):
     with open(extra_conf_fn) as fh:
-        c  = yaml.load(fh) or {}
+        c  = yaml.load(fh, Loader=Loader) or {}
         update_config2(config, c)
 
 #config
 ORG = config.get('organism', 'homo_sapiens')
 AVN_INTERIM = join(QUANT_INTERIM, 'alevin')
-AVN_PROCESSED = join(QUANT_PROCESSED, 'alevin')
+
 
 rule alevin_tx2gene:
     input:
@@ -160,7 +160,7 @@ rule alevin_seurat:
         script = srcdir('scripts/alevin_seurat.R'),
         input_dir = join(AVN_INTERIM, '{sample}')
     output:
-        join(AVN_PROCESSED, 'seurat', '{sample}', '{sample}.rds')
+        join(AVN_INTERIM, 'seurat', '{sample}', '{sample}.rds')
     singularity:
         'docker://gcfntnu/seurat:dev-3.0.1'
     shell:

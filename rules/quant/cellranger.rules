@@ -7,29 +7,18 @@ from collections import defaultdict
 
 from snakemake import logger
 
+CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
+
 extra_conf_fn = srcdir('cellranger.config')
 if os.path.exists(extra_conf_fn):
     with open(extra_conf_fn) as fh:
-        c  = yaml.load(fh) or {}
+        c  = yaml.load(fh, Loader=Loader) or {}
         update_config2(config, c)
 
 #config
 ORG = config.get('organism', 'homo_sapiens')
-CR_PROCESSED = join(QUANT_PROCESSED, 'cellranger')
-CR_INTERIM = join(QUANT_INTERIM, 'cellranger')
 CR_CONF = config['quant']['cellranger']
-AGGR = not config['quant']['aggregate']['skip']
-if AGGR:
-    AGGR_IDS = defaultdict(list)
-    groupby = config['quant']['aggregate'].get('groupby', 'all_samples')
-    for k, v in config['samples'].items():
-        if groupby in v:
-            aggr_id = v[groupby]
-            AGGR_IDS[aggr_id].append(k)
-        elif groupby == 'all_samples':
-            AGGR_IDS['all_samples'].append(k)
-        else:
-            raise ValueError
+
 
 if not '10xgenomics' in REF_DIR:
     CR_REF_DIR = join(REF_DIR, 'cellranger')
@@ -64,7 +53,7 @@ rule cellranger_mkref:
          fasta = join(REF_DIR, 'fasta', 'genome.fa'),
          gtf = join(REF_DIR, 'genes', 'genes.gtf')
     params:
-        out_name = config['db']['10xgenomics']['version'][config['organism']],
+        out_name = config['db']['10xgenomics']['assembly'],
         out_dir = join(REF_DIR, 'cellranger')
     output:
         join(CR_REF_DIR, 'reference.json'),
@@ -93,7 +82,7 @@ rule cellranger_quant_:
         id = '_tmp_{sample}',
         sample = '{sample}',
         genome_dir = CR_REF_DIR,
-        ncells = config['quant']['cellranger']['ncells'],
+        ncells = config['quant']['cellranger'].get('ncells', 5000),
         chemistry = LIBPREP['cellranger']['chemistry'],
         extra_args = '--nopreflight --disable-ui '
     threads:
@@ -147,7 +136,7 @@ rule cellranger_quant:
 
 rule cellranger_aggr_csv:
     input:
-        sample_info = 'data/processed/sample_info.txt',
+        sample_info = join(INTERIM_DIR, 'sample_info.tsv'),
         mol_h5 = expand(rules.cellranger_quant.output.mol_h5, sample=SAMPLES)
     params:
         script = srcdir('scripts/cellranger_aggr_csv.py'),
@@ -233,7 +222,7 @@ rule cellranger_scanpy_convert:
         join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')
     params:
         script = srcdir('scripts/convert_scanpy.py'),
-        genome_name  = config['db']['10xgenomics']['version'][config['organism']]
+        genome_name  = config['db']['assembly']
     output:
         join(CR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:

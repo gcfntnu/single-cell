@@ -3,7 +3,7 @@
 extra_conf_fn = srcdir('umitools.config')
 if os.path.exists(extra_conf_fn):
     with open(extra_conf_fn) as fh:
-        c  = yaml.load(fh) or {}
+        c  = yaml.load(fh, Loader=Loader) or {}
         update_config2(config, c)
 
 # force concat of fastq files

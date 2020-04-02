@@ -2,7 +2,7 @@
 extra_conf_fn = srcdir('gcfdb.config')
 if os.path.exists(extra_conf_fn):
     with open(extra_conf_fn) as fh:
-        c  = yaml.load(fh) or {}
+        c  = yaml.load(fh, Loader=Loader) or {}
         update_config2(config, c)
 GCFDB_DIR = environ.get('GCF-DB') or config.get('gcfdb_dir', '../../gcfdb')
 include:

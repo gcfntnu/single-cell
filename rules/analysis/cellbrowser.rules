@@ -3,7 +3,7 @@ rule cellbrowser_cellranger:
     input:
         rules.cellranger_aggr.output.filt_mtx
     output:
-        'data/processed/cellbrowser/cellranger/'
+        join(QUANT_INTERIM, 'cellbrowser', 'cellranger')
     params:
         name = config['project_id']
     singularity:
@@ -15,7 +15,7 @@ rule cellbrowser_scanpy:
     input:
         rules.cellranger_aggr.output.filt_mtx
     output:
-        'data/processed/cellbrowser/cellranger/'
+        join(QUANT_INTERIM, 'cellbrowser', 'scanpy')
     params:
         name = config['project_id']
     singularity:
