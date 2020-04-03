@@ -25,7 +25,7 @@ rule umitools_whitelist:
     output:
         join(UMI_INTERIM, '{sample}','whitelist.txt')
     singularity:
-        'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
+        'docker://' + config['docker']['umi_tools']
     shell:
         'umi_tools whitelist '
         '--bc-pattern {params.bc_pattern} '
@@ -45,7 +45,7 @@ rule umitools_extract:
         R1 = join(UMI_INTERIM, '{sample}', '{sample}_R1.fastq.gz'),
         R2 = join(UMI_INTERIM, '{sample}', '{sample}_R2.fastq.gz')
     singularity:
-        'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
+        'docker://' + config['docker']['umi_tools']
     shell:
         'umi_tools extract '
         '--stdin {input.R1} '
@@ -62,7 +62,7 @@ rule umitools_align_star:
     output:
         bam = join(UMI_INTERIM, '{sample}', '{sample}.Aligned.sortedByCoord.out.bam')
     singularity:
-        'docker://gcfntnu/star:2.7.0e'
+        'docker://' + config['docker']['star']
     params:
         ref = join(REF_DIR, 'star'),
         out_prefix = join(UMI_INTERIM, '{sample}', '{sample}.'),
@@ -82,7 +82,7 @@ rule umitools_assign_genes:
         bam = join(UMI_INTERIM, '{sample}', '{sample}.Aligned.sortedByCoord.out.bam'),
         gtf = join(REF_DIR, 'genes', 'genes.gtf')
     singularity:
-        'docker://quay.io/biocontainers/subread:1.6.3--ha92aebf_0'
+        'docker://' + config['docker']['subread']
     output:
         out = join(UMI_INTERIM, '{sample}', '{sample}.gene_assignment.txt'),
         bam = join(UMI_INTERIM, '{sample}', '{sample}.Aligned.sortedByCoord.out.bam.featureCounts.bam')
@@ -102,7 +102,7 @@ rule umitools_sort_bam:
     output:
         join(UMI_INTERIM, '{sample}', '{sample}.Assigned.sorted.bam')
     singularity:
-        'docker://quay.io/biocontainers/samtools:1.9--h46bd0b3_0'
+        'docker://' + config['docker']['samtools']
     shell:
         'samtools sort {input} -o {output}'
 
@@ -112,7 +112,7 @@ rule umitools_index_bam:
     output:
         join(UMI_INTERIM, '{sample}', '{sample}.Assigned.sorted.bam.bai')
     singularity:
-        'docker://quay.io/biocontainers/samtools:1.9--h46bd0b3_0'
+        'docker://' + config['docker']['umi_tools']
     shell:
         'samtools index {input}'
     
@@ -125,7 +125,7 @@ rule umitools_quant:
     params:
         '--per-gene --gene-tag=XT --assigned-status-tag=XS --per-cell '
     singularity:
-        'docker://quay.io/biocontainers/umi_tools:0.5.5--py36h470a237_0'
+        'docker://' + config['docker']['umi_tools']
     shell:
         'umi_tools count '
         '{params} '
@@ -140,7 +140,7 @@ rule umitools_scanpy:
     output:
         join(UMI_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4'
+        'docker://' + config['docker']['scanpy']
     shell:
         'python {params.script} -i {input} -o {output} '
 
@@ -152,6 +152,6 @@ rule umitools_seurat:
     output:
         join(UMI_INTERIM, 'seurat', '{sample}', '{sample}.rds')
     singularity:
-        'docker://flatberg/seurat:dev-3.0.1'
+        'docker://' + config['docker']['seurat']
     shell:
         'Rscript {params.script} -i {input} -o {output} '

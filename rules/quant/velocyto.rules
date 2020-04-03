@@ -13,7 +13,7 @@ VELOCYTO_CONF = config['quant'].get('velocyto', {})
 
 
 include:
-    '../gcfdb/ucsc.db'
+    join(GCFDB_DIR, 'ucsc.db')
 include:
     'cellranger.rules'
 
@@ -27,7 +27,7 @@ rule velocyto_cellranger:
     output:
         join(QUANT_INTERIM, 'cellranger', '{sample}', 'velocyto', '{sample}.loom')
     singularity:
-        'docker://gcfntnu/velocyto:0.17.17'
+        'docker://'+ config['docker']['velocyto']
     shell:
         'velocyto run10x '
         '--samtools-threads 8 '
@@ -44,7 +44,7 @@ rule velocyto_scanpy:
     output:
         join(QUANT_INTERIM, '{quant}', '{sample}', 'velocyto', '{sample}.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.3'
+        'docker://'+ config['docker']['scanpy']
     shell:
         'python {params.script} {input} -o {output} -v -f velocyto '
 
@@ -57,6 +57,6 @@ rule velocyto_aggr_scanpy:
     output:
         join(QUANT_INTERIM, 'aggregate', '{quant}', 'velocyto', '{aggr_id}.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.3'
+        'docker://'+ config['docker']['scanpy']
     shell:
         'python {params.script} {input.loom} --aggr-csv {input.csv} -o {output} -v -f velocyto '

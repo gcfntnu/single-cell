@@ -28,7 +28,7 @@ rule fastp_se:
         json = 'logs/{sample}/fastp.json',
         html = 'logs/{sample}/fastp.html'
     singularity:
-        config['filter']['fastp']['docker']
+        'docker://' + config['docker']['fastp']
     shell:
         ' zcat {input} | fastp --stdin -o {output.R1} -j {logs.json} -h {log.html} {params}'
 
@@ -41,7 +41,7 @@ rule fastp_pe:
     threads:
         3
     singularity:
-        config['filter']['fastp']['docker']
+        'docker://' + config['docker']['fastp']
     params:
         config['filter']['fastp']['params']
     log:
@@ -64,7 +64,7 @@ rule fastp_10x_R2:
     output:
         temp(join(FILTER_INTERIM, 'fastp_10x', '{sample}_R2.trimmed.fastq'))
     singularity:
-        config['filter']['fastp']['docker']
+        'docker://' + config['docker']['fastp']
     params:
         config['filter']['fastp']['params']
     log:
@@ -80,7 +80,7 @@ rule fastp_10x_repair:
     params:
         out = join(FILTER_INTERIM, 'fastp_10x')
     singularity:
-        'docker://gcfntnu/fastq_pair:0.3'
+        'docker://' + config['docker']['fastq_pair']
     output:
         R1 = temp(join(FILTER_INTERIM, 'fastp_10x', '{sample}_R1.fastq.paired.fq')),
         R2 = temp(join(FILTER_INTERIM, 'fastp_10x', '{sample}_R2.trimmed.fastq.paired.fq'))

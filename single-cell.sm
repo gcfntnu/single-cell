@@ -43,7 +43,7 @@ rule default_sample_info:
     output:
         join(INTERIM_DIR, 'sample_info.tsv')
     singularity:
-        'docker://gcfntnu/python-base:3.7'
+        'docker://' + config['docker']['default']
     params:
         script = srcdir('scripts/create_sampleinfo.py')
     shell:

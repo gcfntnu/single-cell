@@ -29,7 +29,7 @@ rule alevin_index:
     threads:
         16
     singularity:
-        'docker://gcfntnu/alevin:0.13.1'
+        'docker://' + config['docker']['salmon']
     shell:
         'salmon index '
         '--perfectHash '
@@ -51,6 +51,8 @@ rule alevin_1pass:
         ref = join(REF_DIR, 'salmon')
     output:
         join(AVN_INTERIM, '1pass', '{sample}', 'alevin', 'raw_cb_frequency.txt')
+    singularity:
+        'docker://' + config['docker']['salmon']
     shell:
         'salmon alevin '
         '{params.args} '
@@ -92,7 +94,7 @@ rule alevin_quant:
     threads:
         16
     singularity:
-        'docker://gcfntnu/alevin:0.13.1'
+        'docker://' + config['docker']['salmon']
     output:
         quant = join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.gz'),
         csv = join(AVN_INTERIM, '{sample}', 'alevin', 'quants_mat.csv')
@@ -116,7 +118,7 @@ rule alevin_scanpy_convert:
     output:
         join(AVN_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.3'
+        'docker://' + config['docker']['scanpy']
     shell:
         'python {params.script} {input} -v -f alevin -o {output} '
 
@@ -129,7 +131,7 @@ rule alevin_scanpy_aggr:
     output:
         join(QUANT_INTERIM, 'aggregate', 'alevin', 'scanpy', 'scanpy_aggr.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.3'
+        'docker://' + config['docker']['scanpy'] 
     shell:
         'python {params.script} '
         '{input.mat} '
@@ -162,6 +164,6 @@ rule alevin_seurat:
     output:
         join(AVN_INTERIM, 'seurat', '{sample}', '{sample}.rds')
     singularity:
-        'docker://gcfntnu/seurat:dev-3.0.1'
+        'docker://' + config['docker']['seurat']
     shell:
         'Rscript {params.script} --input {params.input_dir} --output {output}'

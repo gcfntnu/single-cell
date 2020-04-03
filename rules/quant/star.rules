@@ -35,7 +35,7 @@ if config['db']['reference_db'] != '10xgenomics': # 10x prebuilds
         log:
             join(REF_DIR, 'logs', 'STAR.index.log')
         singularity:
-            STAR_CONF['docker']
+            'docker://' + config['docker']['star']
         shell:
             'STAR '
             '--runThreadN {threads} '
@@ -70,7 +70,7 @@ rule starsolo_quant:
         feature_mtx = join(STAR_INTERIM, '{sample}', 'Solo.out', 'matrix.mtx'),
         bam = join(STAR_INTERIM, '{sample}', 'Aligned.sortedByCoord.out.bam')
     singularity:
-        STAR_CONF['docker']
+        'docker://' + config['docker']['star']
     benchmark:
         'benchmark/starsolo/{sample}-starsolo.txt'
     shell:
@@ -97,7 +97,7 @@ rule starsolo_clean_shmem:
     output:
         temp(touch(join(STAR_INTERIM, '.starsolo.mem.cleaned')))
     singularity:
-        STAR_CONF['docker']
+        'docker://' + config['docker']['star']
     shell:
         'STAR --genomeDir {params.genome_dir} --genomeLoad Remove || echo "no shared mem"'
 
@@ -110,7 +110,7 @@ rule starsolo_scanpy_convert:
     output:
         join(STAR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.4'
+        'docker://' + config['docker']['scanpy']
     shell:
         'python {params.script} {input.mat} -f star -o {output} -v '
  
@@ -124,7 +124,7 @@ rule starsolo_scanpy_aggr:
     output:
         join(QUANT_INTERIM, 'aggregate', 'star', 'scanpy', 'scanpy_aggr.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.4'
+        'docker://' + config['docker']['scanpy']
     shell:
         'python {params.script} '
         '{input.mat} '
@@ -141,5 +141,7 @@ rule starsolo_bam_merge:
         join(QUANT_INTERIM, 'aggregate', 'star', 'sorted.bam')
     threads:
         48
+    singularity:
+        'docker://' + config['docker']['sambamba']
     shell:
         'sambamba merge -t 8 {output} {input}'

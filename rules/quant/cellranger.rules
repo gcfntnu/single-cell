@@ -44,7 +44,7 @@ rule cellranger_gtf:
     params:
         ' '.join('--attribute=gene_biotype:{}'.format(bt) for bt in CR_CONF['mkgtf']['gene_biotype'])
     singularity:
-        CR_CONF['docker']
+        'docker://' + config['docker']['cellranger']
     shell:
         'cellranger mkgtf {input} {output} {params}'
 
@@ -62,7 +62,7 @@ rule cellranger_mkref:
     threads:
         48
     singularity:
-        CR_CONF['docker']
+        'docker://' + config['docker']['cellranger']
     shell:
         'cellranger mkref '
         '--fasta {input.fasta} '
@@ -95,7 +95,7 @@ rule cellranger_quant_:
         raw_mtx = join('_tmp_{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
         filt_mtx = join('_tmp_{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
     singularity:
-        CR_CONF['docker']
+        'docker://' + config['docker']['cellranger']
     benchmark:
         'benchmark/cellranger/{sample}-cellranger-count.txt'
     shell:
@@ -168,7 +168,7 @@ rule cellranger_aggr:
     threads:
         48
     singularity:
-        CR_CONF['docker']
+        'docker://' + config['docker']['cellranger']
     shell:
         'cellranger aggr '
         '--csv {input.csv} '
@@ -190,7 +190,7 @@ rule cellranger_aggr_bam:
     threads:
         8
     singularity:
-        'docker://gcfntnu/sambamba:0.7'
+        'docker://' + config['docker']['sambamba']
     shell:
         'python {params.script} {input} {output}'
 
@@ -203,7 +203,7 @@ rule cellranger_aggr_scanpy:
     output:
         join(QUANT_INTERIM, 'aggregate', 'cellranger', 'scanpy', '{aggr_id}_aggr.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.4'
+        'docker://' + config['docker']['scanpy']
     shell:
         'python {params.script} '
         '{input} '
@@ -226,7 +226,7 @@ rule cellranger_scanpy_convert:
     output:
         join(CR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
     singularity:
-        'docker://gcfntnu/scanpy:1.4.4'
+        'docker://' + config['docker']['scanpy']
     shell:
         'python {params.script} {input} -o {output} -v -f cellranger'
         
