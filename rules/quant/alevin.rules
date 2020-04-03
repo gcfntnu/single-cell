@@ -21,7 +21,7 @@ rule alevin_tx2gene:
 
 rule alevin_index:
     input:
-        transcriptome = join(REF_DIR, 'fasta', 'cdna.transcripts.fa')
+        transcriptome = join(REF_DIR, 'fasta', 'gtf.rsem.transcripts.fa')
     output:
         join(REF_DIR, 'salmon', 'refInfo.json')
     params:
