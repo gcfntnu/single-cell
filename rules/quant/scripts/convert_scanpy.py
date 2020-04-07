@@ -6,6 +6,7 @@ warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 import sys
 import os
 import argparse
+import re
 
 import scanpy  as sc
 import pandas as pd
@@ -34,6 +35,7 @@ parser.add_argument('-F', '--output-format', choices=['anndata', 'loom', 'csvs']
 parser.add_argument('--aggr-csv', help='aggregation CSV with header and two columns. First column is `library_id` and second column is path to input file. This is used as a substitute for input files', default=None)
 parser.add_argument('--sample-info', help='samplesheet info, tab seprated file assumes `Sample_ID` in header', default=None)
 parser.add_argument('--feature-info', help='extra feature info filename, tab seprated file assumes `gene_ids` in header', default=None)
+parser.add_argument('--log', help='logfile', default=None)
 parser.add_argument('--filter-org', help='filter data (genes) by organism', default=None)
 parser.add_argument('--gex-only', help='only keep `Gene Expression` data and ignore other feature types.', default=True)
 parser.add_argument('--normalize', help='normalize depth across the input libraries', default='none', choices=['none', 'mapped'])
@@ -89,9 +91,12 @@ def filter_input_by_csv(input, csv_fn, verbose=False):
             csv_rows.append(line.split(','))
     for row in csv_rows:
         sample_id = row[0]
+        patt = os.path.sep + sample_id + os.path.sep
         for pth in input:
-            if '/' + sample_id + '/'  in pth:
+            if patt in pth:
                 filtered_input.append(pth)
+            else:
+                print(pth, sample_id)
     if verbose:
         print('Total input: {}'.format(len(input)))
         print('Filtered input: {}'.format(len(filtered_input)))
@@ -110,14 +115,15 @@ def identify_doublets(data, **kw):
     keep = col_sum > 3
     adata = adata[:,keep]
     scrub = scr.Scrublet(adata.X, **kw)
-    doublet_score, predicted_doublets = scrub.scrub_doublets()
+    min_ncomp = min(10, min(adata.X.shape) - 1)
+    doublet_score, predicted_doublets = scrub.scrub_doublets(n_prin_comps=min_ncomp, min_cells=1, min_counts=1)
     if predicted_doublets is None:
         predicted_doublets = scrub.call_doublets(threshold=0.34)
     data.obs['doublet_score'] =  doublet_score
     data.obs['predicted_doublets'] = predicted_doublets
     return data
 
-def identify_empty_droplets(data, **kw):
+def identify_empty_droplets(data, min_cells=3, **kw):
     """Detect empty droplets using DropletUtils
 
     """
@@ -131,9 +137,10 @@ def identify_empty_droplets(data, **kw):
     col_sum = adata.X.sum(0)
     if hasattr(col_sum, 'A'):
         col_sum = col_sum.A.squeeze()
-    keep = col_sum > 3
+        
+    keep = col_sum > min_cells
     adata = adata[:,keep]
-    #adata.X = adata.X.tocsc()
+    adata.X = adata.X.tocsc()
     anndata2ri.activate()
     robj.globalenv["X"] = adata
     res = robj.r('res <- emptyDrops(assay(X))')
@@ -208,13 +215,16 @@ def read_velocyto_loom(fn, args, **kw):
     
 def read_star(fn, args, **kw):
     mtx_dir = os.path.dirname(fn)
-    dirname = os.path.dirname(mtx_dir)
-    data = sc.readwrite._read_legacy_10x_mtx(mtx_dir, var_names='gene_ids')
-    data.var['gene_ids'] = list(data.var_names)
-    sample_id = os.path.basename(dirname)
+    data = sc.read(fn).T
+    print(data)
+    genes = pd.read_csv(os.path.join(mtx_dir, 'features.tsv'), header=None, sep='\t')
+    barcodes = pd.read_csv(os.path.join(mtx_dir, 'barcodes.tsv'), header=None)[0].values
+    data.var_names = genes[0].values
+    data.var['gene_symbols'] = genes[1].values
+    sample_id = os.path.normpath(fn).split(os.path.sep)[-5]
     data.obs['library_id'] = sample_id
     data.obs['library_id'] = data.obs['library_id'].astype('category')
-    barcodes = [b.split('-')[0] for b in data.obs.index]
+    barcodes = [b.split('-')[0] for b in barcodes]
     if len(barcodes) == len(set(barcodes)):
         data.obs_names = barcodes
     data.obs_names = [i + '-' + sample_id for i in data.obs_names]
@@ -257,7 +267,7 @@ if __name__ == '__main__':
 
     if args.aggr_csv is not None:
         args.input = filter_input_by_csv(args.input, args.aggr_csv, verbose=args.verbose)
-            
+        
     reader = READERS.get(args.input_format.lower())
     if reader is None:
         raise ValueError('{} is not a supported input format'.format(args.input_format))

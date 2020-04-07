@@ -29,33 +29,29 @@ include:
     'quant/umitools.rules'
 include:
     'quant/star.rules'
+include:
+    'quant/velocyto.rules'
+include:
+    'quant/bfq.rules'
     
 QRULES = {'cellranger': rules.cellranger_quant.output,
           'starsolo': rules.starsolo_quant.output,
           'umitools': rules.umitools_quant.output,
           'alevin': rules.alevin_quant.output}
         
-def get_quant():
+def get_quant(wildcards):
     method = config['quant'].get('method', 'cellranger')
+    quant_rule = QRULES[method]
     if config['quant']['aggregate']['skip']:
-        quant_rules = QRULES['method']
         files = expand(quant_rule, samle=SAMPLES)
     else:
         aggr_method = config['quant']['aggregate'].get('method', 'cellranger')
         assert(aggr_method in ['cellranger', 'scanpy'])
         if aggr_method == 'cellranger':
             assert(method == aggr_method)
-            files = expand(rules.cellranger_aggr.output, aggr_id=AGGR_IDS)
+            files = expand(rules.cellranger_aggr.output, aggr_id=AGGR_IDS[wildcards.aggr_id])
         else:
-            for aggr_id in AGGR_IDS:
-                aggr_csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
-                with open(aggr_csv) as fh:
-                    txt = fh.read().splitlines()
-                    header = txt.pop(0)
-                    for line in txt:
-                        sample_id, filename =  line.split(',')
-                        
-            files = expand(quant_rule, samle=SAMPLES)
+            files = expand(rules.cellranger_aggr_scanpy.output, aggr_id=AGGR_IDS[wildcards.aggr_id])
     return files
 
             
