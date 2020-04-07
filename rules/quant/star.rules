@@ -124,7 +124,7 @@ rule scanpy_starsolo:
     singularity:
         'docker://' + config['docker']['scanpy']
     shell:
-        'python {params.script} {input.mat} -f star -o {output} -v --identify-doublets'
+        'python {params.script} {input.mat} -f star -o {output} -v --identify-doublets --identify-empty-droplets '
  
 rule scanpy_aggr_starsolo:
     input:
@@ -146,6 +146,7 @@ rule scanpy_aggr_starsolo:
         '-f star '
         '--normalize {params.norm} '
         '--identify-doublets '
+        '--identify-empty-droplets '
         '-v '       
 
 rule starsolo_bam_merge:
