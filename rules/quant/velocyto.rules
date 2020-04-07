@@ -14,12 +14,10 @@ VELOCYTO_CONF = config['quant'].get('velocyto', {})
 
 include:
     join(GCFDB_DIR, 'ucsc.db')
-include:
-    'cellranger.rules'
 
 rule velocyto_cellranger:
     input:
-        rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk.gtf'),
+        rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk_ensembl.gtf'),
         gtf = join(REF_DIR, 'genes', 'genes.gtf'),
         h5 = join(QUANT_INTERIM, 'cellranger', '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')
     params:
@@ -36,6 +34,30 @@ rule velocyto_cellranger:
         '{params.sample} '
         '{input.gtf} '
 
+rule velocyto_starsolo:
+    input:
+        rep_gtf = join(EXT_DIR, 'ucsc', ORG, 'genes', 'rmsk_ensembl.gtf'),
+        gtf = join(REF_DIR, 'genes', 'genes.gtf'),
+        bam = join(QUANT_INTERIM, 'star', '{sample}', 'Aligned.sortedByCoord.out.bam'),
+        barcodes = join(QUANT_INTERIM, 'star', '{sample}', 'Solo.out', 'GeneFull', 'filtered', 'barcodes.tsv')
+    params:
+        outdir = join(QUANT_INTERIM, 'star', '{sample}', 'velocyto')
+    output:
+        join(QUANT_INTERIM, 'star', '{sample}', 'velocyto', '{sample}.loom')
+    singularity:
+        'docker://'+ config['docker']['velocyto']
+    shell:
+        'velocyto run '
+        '--bcfile {input.barcodes} '
+        '--outputfolder {params.outdir} '
+        '--sampleid {wildcards.sample} '
+        '--samtools-threads 8 '
+        '-m {input.gtf} '
+        '--verbose '
+        '-m {input.rep_gtf} '
+        '{input.bam} '
+        '{input.gtf} '
+
 rule velocyto_scanpy:
     input:
         join(QUANT_INTERIM, '{quant}', '{sample}', 'velocyto', '{sample}.loom')
@@ -50,13 +72,39 @@ rule velocyto_scanpy:
 
 rule velocyto_aggr_scanpy:
     input:
-        loom = expand(join(QUANT_INTERIM, 'cellranger', '{sample}', 'velocyto', '{sample}.loom'), sample=SAMPLES),
+        loom = expand(join(QUANT_INTERIM, '{{quant}}', '{sample}', 'velocyto', '{sample}.loom'), sample=SAMPLES),
         csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
     params:
         script = srcdir('scripts/convert_scanpy.py')
     output:
-        join(QUANT_INTERIM, 'aggregate', '{quant}', 'velocyto', '{aggr_id}.h5ad')
+        join(QUANT_INTERIM, 'aggregate', '{quant}', 'velocyto', '{aggr_id}_aggr.h5ad')
     singularity:
         'docker://'+ config['docker']['scanpy']
     shell:
         'python {params.script} {input.loom} --aggr-csv {input.csv} -o {output} -v -f velocyto '
+
+rule velocyto_merge_aggr:
+    input:
+        sc = join(QUANT_INTERIM, 'aggregate', '{quant}', 'scanpy', '{aggr_id}_aggr.h5ad'),
+        vc = join(QUANT_INTERIM, 'aggregate', '{quant}', 'velocyto', '{aggr_id}_aggr.h5ad')
+    output:
+        join(QUANT_INTERIM, 'aggregate', '{quant}', '{aggr_id}_aggr.h5ad')
+    params:
+        script = srcdir('scripts/merge_scanpy.py')
+    singularity:
+        'docker://'+ config['docker']['scanpy']
+    shell:
+        'python {params.script} {input.sc} {input.vc} {output}'
+        
+rule velocyto_merge:
+    input:
+        sc = join(QUANT_INTERIM, '{quant}', '{sample}', 'scanpy', '{sample}.h5ad'),
+        vc = join(QUANT_INTERIM, '{quant}', '{sample}', 'velocyto', '{sample}.h5ad')
+    output:
+        join(QUANT_INTERIM, '{quant}', '{sample}', '{sample}.h5ad')
+    params:
+        script = srcdir('scripts/merge_scanpy.py')
+    singularity:
+        'docker://'+ config['docker']['scanpy']
+    shell:
+        'python {params.script} {input.sc} {input.vc} {output}'

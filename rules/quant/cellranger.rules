@@ -194,9 +194,10 @@ rule cellranger_aggr_bam:
     shell:
         'python {params.script} {input} {output}'
 
-rule cellranger_aggr_scanpy:
+rule scanpy_aggr_cellranger:
     input:
-        rules.cellranger_aggr.output.filt_h5
+        input = expand(rules.cellranger_quant.output.filt_h5, sample=SAMPLES),
+        csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv')
     params:
         script = srcdir('scripts/convert_scanpy.py'),
         norm = config['quant']['aggregate']['norm']
@@ -206,25 +207,22 @@ rule cellranger_aggr_scanpy:
         'docker://' + config['docker']['scanpy']
     shell:
         'python {params.script} '
-        '{input} '
+        '{input.input} '
+        '--aggr-csv {input.csv} '
         '-o {output} '
-        '-f cellranger_aggr '
+        '-f cellranger '
         '--normalize {params.norm} '
         '--identify-doublets '
         '-v '
 
-rule cellranger_aggr_scanpy2:
-    input:
-        expand(rules.cellranger_aggr_scanpy.output, aggr_id=AGGR_IDS.keys())
-        
-rule cellranger_scanpy_convert:
+rule scanpy_cellranger:
     input:
         join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5')
     params:
         script = srcdir('scripts/convert_scanpy.py'),
         genome_name  = config['db']['assembly']
     output:
-        join(CR_INTERIM, '{sample}', 'scanpy', 'adata.h5ad')
+        join(CR_INTERIM, '{sample}', 'scanpy', '{sample}.h5ad')
     singularity:
         'docker://' + config['docker']['scanpy']
     shell:
