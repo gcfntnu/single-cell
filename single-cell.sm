@@ -15,7 +15,7 @@ from os import environ
 from os.path import abspath, join
 
 
-GCFDB_DIR = environ.get('GCF-DB') or config.get('gcfdb_dir', 'src/gcfdb')
+GCFDB_DIR = environ.get('GCF_DB') or config.get('gcfdb_dir', 'src/gcfdb')
 GCFDB_DIR = abspath(GCFDB_DIR)
 include:
     join(GCFDB_DIR, 'utils.py')
