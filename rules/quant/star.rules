@@ -49,13 +49,13 @@ if config['db']['reference_db'] == '10xgenomics':
     REF_GENOME = join(REF_DIR, 'starsolo', 'SA')
 else:
     REF_GENOME = join(REF_DIR, 'star', 'SA')
-    
+
 rule starsolo_quant:
     input:
         R1 = get_filtered_fastq_R1,
         R2 = get_filtered_fastq_R2,
         genome = REF_GENOME,
-        whitelist = join(EXT_DIR, '10xgenomics', LIBPREP['starsolo']['whitelist'])
+        whitelist = join(EXT_DIR, '10xgenomics', config.get('organism'), "release-{}".format(config['db']['10xgenomics']['release']), config['db']['10xgenomics']['assembly'], LIBPREP['starsolo']['whitelist'])
     params:
         outdir = join(STAR_INTERIM, '{sample}') + '/',
         genome_dir = os.path.dirname(REF_GENOME),
