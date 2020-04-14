@@ -123,6 +123,8 @@ rule scanpy_starsolo:
         join(STAR_INTERIM, '{sample}', 'scanpy', '{sample}.h5ad')
     singularity:
         'docker://' + config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} {input.mat} -f star -o {output} -v --identify-doublets --identify-empty-droplets '
  
@@ -138,6 +140,8 @@ rule scanpy_aggr_starsolo:
         join(QUANT_INTERIM, 'aggregate', 'star', 'scanpy', '{aggr_id}_aggr.h5ad')
     singularity:
         'docker://' + config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} '
         '{input.input} '

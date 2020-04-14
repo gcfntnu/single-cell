@@ -144,6 +144,8 @@ rule cellranger_aggr_csv:
         outdir = join(QUANT_INTERIM, 'aggregate', 'description')
     output:
         expand(join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv'), aggr_id=AGGR_IDS.keys())
+    threads:
+        48
     shell:
         'python {params.script} '
         '{input.mol_h5} '
@@ -188,7 +190,7 @@ rule cellranger_aggr_bam:
     params:
         script = srcdir('scripts/cellranger_merge_bam.py')
     threads:
-        8
+        48
     singularity:
         'docker://' + config['docker']['sambamba']
     shell:
@@ -205,6 +207,8 @@ rule scanpy_aggr_cellranger:
         join(QUANT_INTERIM, 'aggregate', 'cellranger', 'scanpy', '{aggr_id}_aggr.h5ad')
     singularity:
         'docker://' + config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} '
         '{input.input} '
@@ -225,6 +229,8 @@ rule scanpy_cellranger:
         join(CR_INTERIM, '{sample}', 'scanpy', '{sample}.h5ad')
     singularity:
         'docker://' + config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} {input} -o {output} -v -f cellranger'
         
