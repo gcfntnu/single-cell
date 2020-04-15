@@ -44,11 +44,12 @@ rule starsolo_genome_index:
         '--sjdbOverhang {params.readlength} '
         '&& mv Log.out {log} '
 
+READ_LENGTH = config.get('read_geometry', [28, 98])[-1]
 if config['db']['reference_db'] == '10xgenomics':
     # rebuild genome to match current star version
-    REF_GENOME = join(REF_DIR, 'starsolo', 'SA')
+    REF_GENOME = join(REF_DIR, 'index', 'genome', 'starsolo', 'r_{}'.format(READ_LENGTH), 'SA')
 else:
-    REF_GENOME = join(REF_DIR, 'star', 'SA')
+    REF_GENOME = join(REF_DIR, 'index', 'genome', 'star', 'r_{}'.format(READ_LENGTH), 'SA')
 
 rule starsolo_quant:
     input:

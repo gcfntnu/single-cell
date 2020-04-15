@@ -49,13 +49,14 @@ rule velocyto_starsolo:
     singularity:
         'docker://'+ config['docker']['velocyto']
     threads:
-        48
+        16
     shell:
         'velocyto run '
         '--bcfile {input.barcodes} '
         '--outputfolder {params.outdir} '
         '--sampleid {wildcards.sample} '
-        '--samtools-threads 8 '
+        '--samtools-threads 16 '
+        '--samtools-memory 29 '
         '-m {input.gtf} '
         '--verbose '
         '-m {input.rep_gtf} '
