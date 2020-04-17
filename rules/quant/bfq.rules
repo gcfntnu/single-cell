@@ -46,9 +46,38 @@ rule bfq_aligned:
     run:
         for src, dst  in zip(input, output):
             shell('ln -sr {src} {dst}')
+
+rule bfq_umap_png:
+    input:
+        expand(rules.velocyto_merge_aggr.output, quant=['star'], aggr_id=AGGR_IDS)
+    output:
+        expand(join(BFQ_INTERIM, 'figs', '{quant}', '{aggr_id}_mqc.png'), quant=['star'], aggr_id=AGGR_IDS)
+    params:
+        script = srcdir('scripts/plotpca.py')
+    singularity:
+        'docker://' + config['docker']['scanpy']
+    run:
+        for inn, out in zip(input, output):
+            shell('python {params.script} {inn} -o {out}')
+            
+rule bfq_umap_yaml:
+    input:
+        expand(rules.velocyto_merge_aggr.output, quant=['star'], aggr_id=AGGR_IDS)
+    output:
+        expand(join(BFQ_INTERIM, 'figs', '{quant}', '{aggr_id}_mqc.yaml'), quant=['star'], aggr_id=AGGR_IDS)
+    params:
+        script = srcdir('scripts/plotpca.py')
+    singularity:
+        'docker://' + config['docker']['scanpy']
+    run:
+        for inn, out in zip(input, output):
+            shell('python {params.script} {inn} -o {out}')
+
             
 rule bfq_all:
     input:
         rules.bfq_exprs.output,
         rules.bfq_logs.output,
-        rules.bfq_aligned.output
+        rules.bfq_aligned.output,
+        rules.bfq_umap_yaml.output,
+        rules.bfq_umap_png.output
