@@ -58,7 +58,7 @@ def downsample_gemgroup(data_list):
             idx = i
     for j, data in enumerate(data_list):
         if j != idx:
-            sc.pp.downsample_counts(data, total_counts = min_count)
+            sc.pp.downsample_counts(data, total_counts = min_count, replace=True)
         sampled_list.append(data)
     return sampled_list
 
@@ -140,7 +140,7 @@ def identify_empty_droplets(data, min_cells=3, **kw):
         
     keep = col_sum > min_cells
     adata = adata[:,keep]
-    adata.X = adata.X.tocsc()
+    #adata.X = adata.X.tocsc()
     anndata2ri.activate()
     robj.globalenv["X"] = adata
     res = robj.r('res <- emptyDrops(assay(X))')

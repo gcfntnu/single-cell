@@ -49,7 +49,6 @@ rule default_sample_info:
     shell:
         'python {params.script} config.yaml > {output}'
 
-print(config['db']['reference_db'])
 onsuccess:
     # write config
     from datetime import datetime
