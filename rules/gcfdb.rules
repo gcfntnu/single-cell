@@ -7,5 +7,7 @@ if os.path.exists(extra_conf_fn):
 
 include:
     join(GCFDB_DIR, 'reference_db.db')
+include:
+    join(GCFDB_DIR, '10xgenomics.db')
 
 

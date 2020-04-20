@@ -46,9 +46,37 @@ rule bfq_aligned:
     run:
         for src, dst  in zip(input, output):
             shell('ln -sr {src} {dst}')
+
+
+rule bfq_umap_png:
+    input:
+        join(QUANT_INTERIM, 'aggregate', '{quant}', '{aggr_id}_aggr.h5ad')
+    output:
+        join(BFQ_INTERIM, 'figs', '{quant}', '{aggr_id}_mqc.png')
+    params:
+        script = srcdir('scripts/plotpca.py')
+    singularity:
+        'docker://' + config['docker']['scanpy']
+    shell:
+        'python {params.script} {input} -o {output}'
             
+rule bfq_umap_yaml:
+    input:
+        join(QUANT_INTERIM, 'aggregate', '{quant}', '{aggr_id}_aggr.h5ad')
+    output:
+        join(BFQ_INTERIM, 'figs', '{quant}', '{aggr_id}_mqc.yaml')
+    params:
+        script = srcdir('scripts/plotpca.py')
+    singularity:
+        'docker://' + config['docker']['scanpy']
+    shell:
+        'python {params.script} {input} -o {output}'
+
+
 rule bfq_all:
     input:
         rules.bfq_exprs.output,
         rules.bfq_logs.output,
-        rules.bfq_aligned.output
+        rules.bfq_aligned.output,
+        expand(join(BFQ_INTERIM, 'figs', '{quant}', '{aggr_id}_mqc.yaml'), quant=['star'], aggr_id=AGGR_IDS),
+        expand(join(BFQ_INTERIM, 'figs', '{quant}', '{aggr_id}_mqc.png'), quant=['star'], aggr_id=AGGR_IDS)

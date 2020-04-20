@@ -26,6 +26,8 @@ rule velocyto_cellranger:
         join(QUANT_INTERIM, 'cellranger', '{sample}', 'velocyto', '{sample}.loom')
     singularity:
         'docker://'+ config['docker']['velocyto']
+    threads:
+        48
     shell:
         'velocyto run10x '
         '--samtools-threads 8 '
@@ -46,12 +48,15 @@ rule velocyto_starsolo:
         join(QUANT_INTERIM, 'star', '{sample}', 'velocyto', '{sample}.loom')
     singularity:
         'docker://'+ config['docker']['velocyto']
+    threads:
+        16
     shell:
         'velocyto run '
         '--bcfile {input.barcodes} '
         '--outputfolder {params.outdir} '
         '--sampleid {wildcards.sample} '
-        '--samtools-threads 8 '
+        '--samtools-threads 16 '
+        '--samtools-memory 29 '
         '-m {input.gtf} '
         '--verbose '
         '-m {input.rep_gtf} '
@@ -67,6 +72,8 @@ rule velocyto_scanpy:
         join(QUANT_INTERIM, '{quant}', '{sample}', 'velocyto', '{sample}.h5ad')
     singularity:
         'docker://'+ config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} {input} -o {output} -v -f velocyto '
 
@@ -80,6 +87,8 @@ rule velocyto_aggr_scanpy:
         join(QUANT_INTERIM, 'aggregate', '{quant}', 'velocyto', '{aggr_id}_aggr.h5ad')
     singularity:
         'docker://'+ config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} {input.loom} --aggr-csv {input.csv} -o {output} -v -f velocyto '
 
@@ -93,6 +102,8 @@ rule velocyto_merge_aggr:
         script = srcdir('scripts/merge_scanpy.py')
     singularity:
         'docker://'+ config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} {input.sc} {input.vc} {output}'
         
@@ -106,5 +117,7 @@ rule velocyto_merge:
         script = srcdir('scripts/merge_scanpy.py')
     singularity:
         'docker://'+ config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} {input.sc} {input.vc} {output}'

@@ -44,18 +44,19 @@ rule starsolo_genome_index:
         '--sjdbOverhang {params.readlength} '
         '&& mv Log.out {log} '
 
+READ_LENGTH = config.get('read_geometry', [28, 98])[-1]
 if config['db']['reference_db'] == '10xgenomics':
     # rebuild genome to match current star version
-    REF_GENOME = join(REF_DIR, 'starsolo', 'SA')
+    REF_GENOME = join(REF_DIR, 'index', 'genome', 'starsolo', 'r_{}'.format(READ_LENGTH), 'SA')
 else:
-    REF_GENOME = join(REF_DIR, 'star', 'SA')
-    
+    REF_GENOME = join(REF_DIR, 'index', 'genome', 'star', 'r_{}'.format(READ_LENGTH), 'SA')
+
 rule starsolo_quant:
     input:
         R1 = get_filtered_fastq_R1,
         R2 = get_filtered_fastq_R2,
         genome = REF_GENOME,
-        whitelist = join(EXT_DIR, '10xgenomics', LIBPREP['starsolo']['whitelist'])
+        whitelist = join(EXT_DIR, '10xgenomics', config.get('organism'), "release-{}".format(config['db']['10xgenomics']['release']), config['db']['10xgenomics']['assembly'], LIBPREP['starsolo']['whitelist'])
     params:
         outdir = join(STAR_INTERIM, '{sample}') + '/',
         genome_dir = os.path.dirname(REF_GENOME),
@@ -123,6 +124,8 @@ rule scanpy_starsolo:
         join(STAR_INTERIM, '{sample}', 'scanpy', '{sample}.h5ad')
     singularity:
         'docker://' + config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} {input.mat} -f star -o {output} -v --identify-doublets --identify-empty-droplets '
  
@@ -138,6 +141,8 @@ rule scanpy_aggr_starsolo:
         join(QUANT_INTERIM, 'aggregate', 'star', 'scanpy', '{aggr_id}_aggr.h5ad')
     singularity:
         'docker://' + config['docker']['scanpy']
+    threads:
+        48
     shell:
         'python {params.script} '
         '{input.input} '
