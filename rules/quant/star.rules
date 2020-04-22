@@ -132,13 +132,12 @@ rule scanpy_starsolo:
 rule scanpy_aggr_starsolo:
     input:
         input = expand(rules.starsolo_quant.output.raw_mtx, sample=SAMPLES),
-        csv = join(QUANT_INTERIM, 'aggregate', 'description', '{aggr_id}_aggr.csv'),
         mem_clean = rules.starsolo_clean_shmem.output
     params:
         script = srcdir('scripts/convert_scanpy.py'),
         norm = config['quant']['aggregate']['norm']
     output:
-        join(QUANT_INTERIM, 'aggregate', 'star', 'scanpy', '{aggr_id}_aggr.h5ad')
+        join(QUANT_INTERIM, 'aggregate', 'star', 'scanpy', 'all_samples_aggr.h5ad')
     singularity:
         'docker://' + config['docker']['scanpy']
     threads:
@@ -146,7 +145,6 @@ rule scanpy_aggr_starsolo:
     shell:
         'python {params.script} '
         '{input.input} '
-        '--aggr-csv {input.csv} '
         '-o {output} '
         '-f star '
         '--normalize {params.norm} '

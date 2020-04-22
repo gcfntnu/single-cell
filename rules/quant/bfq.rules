@@ -78,5 +78,5 @@ rule bfq_all:
         rules.bfq_exprs.output,
         rules.bfq_logs.output,
         rules.bfq_aligned.output,
-        expand(join(BFQ_INTERIM, 'figs', '{quant}', '{aggr_id}_mqc.yaml'), quant=['star'], aggr_id=AGGR_IDS),
-        expand(join(BFQ_INTERIM, 'figs', '{quant}', '{aggr_id}_mqc.png'), quant=['star'], aggr_id=AGGR_IDS)
+        join(BFQ_INTERIM, 'figs', 'star', 'all_samples_mqc.yaml'),
+        join(BFQ_INTERIM, 'figs', 'star', 'all_samples_mqc.png')
