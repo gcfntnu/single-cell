@@ -73,10 +73,11 @@ rule bfq_umap_yaml:
         'python {params.script} {input} -o {output}'
 
 
+print(AGGR_IDS)
+
 rule bfq_all:
     input:
         rules.bfq_exprs.output,
         rules.bfq_logs.output,
         rules.bfq_aligned.output,
-        join(BFQ_INTERIM, 'figs', 'star', 'all_samples_mqc.yaml'),
         join(BFQ_INTERIM, 'figs', 'star', 'all_samples_mqc.png')
