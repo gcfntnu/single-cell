@@ -73,8 +73,6 @@ rule bfq_umap_yaml:
         'python {params.script} {input} -o {output}'
 
 
-print(AGGR_IDS)
-
 rule bfq_all:
     input:
         rules.bfq_exprs.output,
