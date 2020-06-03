@@ -52,7 +52,7 @@ rule bfq_umap_png:
     input:
         join(QUANT_INTERIM, 'aggregate', '{quant}', '{aggr_id}_aggr.h5ad')
     output:
-        join(BFQ_INTERIM, 'figs', '{quant}', '{aggr_id}_mqc.png')
+        join(BFQ_INTERIM, 'figs', '{quant}', 'umap_{aggr_id}_mqc.png')
     params:
         script = srcdir('scripts/plotpca.py')
     singularity:

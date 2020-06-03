@@ -147,7 +147,7 @@ if __name__ == "__main__":
         F = F.loc[E.obs.index, :]
 
     if args.output.endswith('_mqc.png'):
-        fig = sc.pl.umap(adata, return_fig=True, color='louvain')
+        fig = sc.pl.umap(adata, return_fig=True, color=['louvain', 'library_id'], ncols=1)
         fig.savefig(args.output, dpi=300, bbox_inches='tight')
     elif args.output.endswith('_mqc.yaml'):
         T = pd.DataFrame(adata.obsm['X_umap'], index=adata.obs_names)
