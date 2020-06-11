@@ -32,6 +32,8 @@ include:
 include:
     'quant/velocyto.rules'
 include:
+    'qc/qc.rules'
+include:
     'quant/bfq.rules'
     
 QRULES = {'cellranger': rules.cellranger_quant.output,

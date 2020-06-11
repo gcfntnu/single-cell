@@ -27,13 +27,15 @@ rule bfq_logs:
         gene_stats = expand(rules.starsolo_quant.output.gene_stats, sample=SAMPLES),
         cell_stats = expand(rules.starsolo_quant.log.barcodes, sample=SAMPLES),
         star = expand(rules.starsolo_quant.log.star, sample=SAMPLES),
-        umi_cell = expand(rules.starsolo_quant.log.umi_cell, sample=SAMPLES)
+        umi_cell = expand(rules.starsolo_quant.log.umi_cell, sample=SAMPLES),
+        picard_star = expand(rules.picard_rnametrics_star.log.metrics, sample=SAMPLES),
     output:
         expand(join(BFQ_INTERIM, 'logs', '{quant}', '{sample}_Summary.csv'), quant=['star'], sample=SAMPLES),
         expand(join(BFQ_INTERIM, 'logs', '{quant}', '{sample}_Features.stat'), quant=['star'], sample=SAMPLES),
         expand(join(BFQ_INTERIM, 'logs', '{quant}', '{sample}_Barcodes.stat'), quant=['star'], sample=SAMPLES),
         expand(join(BFQ_INTERIM, 'logs', '{quant}', '{sample}_Log.final.out'), quant=['star'], sample=SAMPLES),
-        expand(join(BFQ_INTERIM, 'logs', '{quant}', '{sample}_UMIperCellSorted.txt'), quant=['star'], sample=SAMPLES)
+        expand(join(BFQ_INTERIM, 'logs', '{quant}', '{sample}_UMIperCellSorted.txt'), quant=['star'], sample=SAMPLES),
+        expand(join(BFQ_INTERIM, 'logs', '{quant}', '{sample}.rnaseq.metrics'), quant=['star'], sample=SAMPLES)
     run:
         for src, dst  in zip(input, output):
             shell('ln -sr {src} {dst}')
