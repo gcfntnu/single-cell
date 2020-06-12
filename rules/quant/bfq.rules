@@ -80,4 +80,4 @@ rule bfq_all:
         rules.bfq_exprs.output,
         rules.bfq_logs.output,
         rules.bfq_aligned.output,
-        join(BFQ_INTERIM, 'figs', 'star', 'all_samples_mqc.png')
+        join(BFQ_INTERIM, 'figs', 'star', 'umap_all_samples_mqc.png')
