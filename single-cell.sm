@@ -37,6 +37,8 @@ include:
     'rules/filter.rules'
 include:
     'rules/quant.rules'
+include:
+    'rules/qc/qc.rules'
 
 
 rule default_sample_info:

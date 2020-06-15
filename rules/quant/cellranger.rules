@@ -93,7 +93,8 @@ rule cellranger_quant_:
         filt_h5 = join('_tmp_{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
         mol_h5 = join('_tmp_{sample}', 'outs', 'molecule_info.h5'),
         raw_mtx = join('_tmp_{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
-        filt_mtx = join('_tmp_{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
+        filt_mtx = join('_tmp_{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz'),
+        bam = join('_tmp_{sample}', 'outs', 'possorted_genome_bam.bam'),
     singularity:
         'docker://' + config['docker']['cellranger']
     benchmark:
@@ -117,14 +118,16 @@ rule cellranger_quant:
         rules.cellranger_quant_.output.filt_h5,
         rules.cellranger_quant_.output.mol_h5,
         rules.cellranger_quant_.output.raw_mtx, 
-        rules.cellranger_quant_.output.filt_mtx
+        rules.cellranger_quant_.output.filt_mtx,
+        rules.cellranger_quant_.output.bam,
     output:
         summary = join(CR_INTERIM, '{sample}', 'outs', 'web_summary.html'),
         raw_h5 = join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix.h5'),
         filt_h5 = join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix.h5'),
         mol_h5 = join(CR_INTERIM, '{sample}', 'outs', 'molecule_info.h5'),
         raw_mtx = join(CR_INTERIM, '{sample}', 'outs', 'raw_feature_bc_matrix', 'barcodes.tsv.gz'),
-        filt_mtx = join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz')
+        filt_mtx = join(CR_INTERIM, '{sample}', 'outs', 'filtered_feature_bc_matrix', 'barcodes.tsv.gz'),
+        bam = join(CR_INTERIM, '{sample}', 'outs', 'possorted_genome_bam.bam'),
     params:
         outdir = join(CR_INTERIM, '{sample}'),
         id = '_tmp_{sample}'
@@ -133,6 +136,14 @@ rule cellranger_quant:
     shell:
         'cp -r {params.id}/* {params.outdir} && '
         'rm -rf {params.id} '
+
+rule cellranger_bam:
+    input:
+        rules.cellranger_quant.output.bam
+    output:
+        join(CR_INTERIM, '{sample}', 'outs', '{sample}_possorted_genome_bam.bam')
+    shell:
+        'ln -sr {input} {output}'
 
 rule cellranger_aggr_csv:
     input:

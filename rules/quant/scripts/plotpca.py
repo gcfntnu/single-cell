@@ -147,7 +147,10 @@ if __name__ == "__main__":
         F = F.loc[E.obs.index, :]
 
     if args.output.endswith('_mqc.png'):
-        fig = sc.pl.umap(adata, return_fig=True, color='louvain')
+        pca_color = ['louvain', 'library_id']
+        if 'Sample_Group' in adata.obs.columns:
+            pca_color.append('Sample_Group')
+        fig = sc.pl.umap(adata, return_fig=True, color=pca_color, ncols=1)
         fig.savefig(args.output, dpi=300, bbox_inches='tight')
     elif args.output.endswith('_mqc.yaml'):
         T = pd.DataFrame(adata.obsm['X_umap'], index=adata.obs_names)

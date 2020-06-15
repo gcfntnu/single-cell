@@ -102,6 +102,16 @@ rule starsolo_quant:
         '--runThreadN {threads} '
         '{params.extra_args} '
 
+rule starsolo_bam:
+    input:
+        rules.starsolo_quant.output.bam
+    output:
+        join(STAR_INTERIM, '{sample}', '{sample}_Aligned.sortedByCoord.out.bam')
+    shell:
+        'ln -sr {input} {output}'
+
+        
+
 rule starsolo_clean_shmem:
     input:
         expand(rules.starsolo_quant.output, sample=SAMPLES)
