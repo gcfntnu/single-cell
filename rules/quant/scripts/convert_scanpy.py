@@ -12,7 +12,6 @@ import scanpy  as sc
 import pandas as pd
 import numpy as np
 import anndata
-from vpolo.alevin import parser as alevin_parser
 import scvelo as sv
 
 GENOME = {'homo_sapiens': 'GRCh38',
@@ -238,6 +237,7 @@ def read_star(fn, args, **kw):
     return data
 
 def read_alevin(fn, args, **kw):
+    from vpolo.alevin import parser as alevin_parser
     avn_dir = os.path.dirname(fn)
     dirname = os.path.dirname(avn_dir)
     if fn.endswith('.gz'):
