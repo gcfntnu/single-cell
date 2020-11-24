@@ -113,7 +113,7 @@ if __name__ == "__main__":
     adata = sc.read(args.exprs)
 
     # standard preprocessing
-    sc.pp.filter_cells(adata, min_genes=200)
+    sc.pp.filter_cells(adata, min_genes=20)
     sc.pp.filter_genes(adata, min_cells=3)
     sc.pp.filter_genes(adata, min_counts=5)
     sc.pp.normalize_total(adata, key_added='n_counts_all')
