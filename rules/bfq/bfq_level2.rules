@@ -2,9 +2,7 @@ import glob
 import os
 
 
-BFQ_INTERIM = join(INTERIM_DIR, 'singlecell', 'bfq')
-
-rule bfq_exprs:
+rule bfq_level2_exprs:
     input:
         aggr_h5ad = expand(rules.velocyto_merge_aggr.output, quant=['star'], aggr_id=AGGR_IDS),
         sample_h5ad = expand(rules.velocyto_merge.output, quant=['star'], sample=SAMPLES),
@@ -21,7 +19,7 @@ rule bfq_exprs:
         for src, dst  in zip(input, output):
             shell('ln -sr {src} {dst}')
 
-rule bfq_logs:
+rule bfq_level2_logs:
     input:
         summary = expand(rules.starsolo_quant.output.gene_summary, sample=SAMPLES),
         gene_stats = expand(rules.starsolo_quant.output.gene_stats, sample=SAMPLES),
@@ -40,7 +38,7 @@ rule bfq_logs:
         for src, dst  in zip(input, output):
             shell('ln -sr {src} {dst}')
 
-rule bfq_aligned:
+rule bfq_level2_aligned:
     input:
         bam = expand(rules.starsolo_quant.output.bam, sample=SAMPLES)
     output:
@@ -50,7 +48,7 @@ rule bfq_aligned:
             shell('ln -sr {src} {dst}')
 
 
-rule bfq_umap_png:
+rule bfq_level2_umap_png:
     input:
         join(QUANT_INTERIM, 'aggregate', '{quant}', '{aggr_id}_aggr.h5ad')
     output:
@@ -62,7 +60,7 @@ rule bfq_umap_png:
     shell:
         'python {params.script} {input} -o {output}'
             
-rule bfq_umap_yaml:
+rule bfq_level2_umap_yaml:
     input:
         join(QUANT_INTERIM, 'aggregate', '{quant}', '{aggr_id}_aggr.h5ad')
     output:
@@ -75,9 +73,3 @@ rule bfq_umap_yaml:
         'python {params.script} {input} -o {output}'
 
 
-rule bfq_all:
-    input:
-        rules.bfq_exprs.output,
-        rules.bfq_logs.output,
-        rules.bfq_aligned.output,
-        join(BFQ_INTERIM, 'figs', 'star', 'umap_all_samples_mqc.png')
